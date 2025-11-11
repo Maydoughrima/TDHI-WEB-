@@ -1,4 +1,4 @@
-import pool from './config/db.js';  // note the .js extension
+import pool from './config/db.js';  // note the .js extension 
 
 async function getPatients() {
   try {
@@ -10,5 +10,6 @@ async function getPatients() {
     pool.end();
   }
 }
+
 
 getPatients();
