@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import Navbar from "../components/Navbar.jsx"; // optional navbar
 import logo from "../assets/logo.png";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -53,9 +52,9 @@ export default function LogInForm({ onLogin }) {
 
   return (
     <main>
-      <div className="wrapper bg-bg flex flex-col items-center justify-center min-h-screen max-w-[700px] mx-auto gap-4">
+      <div className="wrapper bg-bgshade flex flex-col items-center justify-center min-h-screen max-w-[700px] mx-auto gap-4">
         {/* Logo */}
-        <div className="logo-wrapper w-32 h-32 mb-4">
+        <div className="logo-wrapper w-32 h-32 mb-4 md:w-40 md:h-40 lg:w-48 lg:h-48">
           <img
             src={logo}
             alt="logo"
