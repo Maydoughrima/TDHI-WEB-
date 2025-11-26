@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import logo from "../assets/logo.png";
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { LuHouse, LuFileCog } from "react-icons/lu";
 import { FaRegFile } from "react-icons/fa";
 import { IoChevronDown, IoChevronUp, IoMenu, IoClose } from "react-icons/io5";
@@ -53,50 +53,53 @@ export default function Sidebar() {
           {/* Main Section */}
           <div className="main-comp px-4 flex flex-col gap-2">
             <div className="sec-title font-heading text-sm text-gray-500">
-              <Link>Main</Link>
+              <NavLink>Main</NavLink>
             </div>
 
             {/* Dashboard Link */}
             <div className="dshb-lnk font-heading flex items-center gap-2">
-              <LuHouse className="text-xl text-gray-500" />
-              <Link className="text-base text-fontc">Dashboard</Link>
+              <NavLink
+                to="/user/dashboard"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 p-2 rounded-lg w-full ${
+                    isActive ? "bg-accent text-white" : "text-fontc"
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <div className="flex items-center gap-2">
+                    <LuHouse
+                      className={`text-xl ${
+                        isActive ? "text-white" : "text-gray-500"
+                      }`}
+                    />
+                    <span>Dashboard</span>
+                  </div>
+                )}
+              </NavLink>
             </div>
 
             {/* Generate File Link */}
             <div className="gntf-lnk font-heading flex items-center gap-2">
-              <FaRegFile className="text-lg text-gray-500" />
-              <Link className="text-base text-fontc">Generate File</Link>
-            </div>
-
-            {/* Processing Dropdown */}
-            <div className="pros-lnk font-heading flex flex-col gap-4">
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center justify-between gap-2 w-full text-left"
+              <NavLink
+                to="/user/generatefile"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 p-2 rounded-lg w-full ${
+                    isActive ? "bg-accent text-white" : "text-fontc"
+                  }`
+                }
               >
-                <div className="flex items-center gap-2">
-                  <LuFileCog className="text-lg text-gray-500" />
-                  <span className="text-base text-fontc">Processing</span>
-                </div>
-
-                {isDropdownOpen ? (
-                  <IoChevronUp className="text-gray-500" />
-                ) : (
-                  <IoChevronDown className="text-gray-500" />
+                {({ isActive }) => (
+                  <div className="flex items-center gap-2">
+                    <FaRegFile
+                      className={`text-xl ${
+                        isActive ? "text-white" : "text-gray-500"
+                      }`}
+                    />
+                    <span>Processing</span>
+                  </div>
                 )}
-              </button>
-
-              {/* Dropdown Items */}
-              <div
-                className={`flex flex-col gap-4 ml-5 pl-4 border-l border-l-gray-300 transition-all duration-300 ${
-                  isDropdownOpen
-                    ? "max-h-40 opacity-100"
-                    : "max-h-0 opacity-0 overflow-hidden"
-                }`}
-              >
-                <Link className="text-sm text-fontc">Encode DTR</Link>
-                <Link className="text-sm text-fontc">Deductions</Link>
-              </div>
+              </NavLink>
             </div>
           </div>
 
@@ -107,35 +110,26 @@ export default function Sidebar() {
             </div>
 
             {/* Employee Profile Dropdown */}
-            <div className="EP-lnk font-heading flex flex-col gap-4">
-              <button
-                onClick={() => setIsEPDropdownOpen(!isEPDropdownOpen)}
-                className="flex items-center justify-between gap-2 w-full text-left"
+            <div className="gntf-lnk font-heading flex items-center gap-2">
+              <NavLink
+                to="/user/employeeprofile"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 p-2 rounded-lg w-full ${
+                    isActive ? "bg-accent text-white" : "text-fontc"
+                  }`
+                }
               >
-                <div className="flex items-center gap-2">
-                  <GoPeople className="text-lg text-gray-500" />
-                  <span className="text-base text-fontc">Employee Profile</span>
-                </div>
-
-                {isEPDropdownOpen ? (
-                  <IoChevronUp className="text-gray-500" />
-                ) : (
-                  <IoChevronDown className="text-gray-500" />
+                {({ isActive }) => (
+                  <div className="flex items-center gap-2">
+                    <GoPeople
+                      className={`text-xl ${
+                        isActive ? "text-white" : "text-gray-500"
+                      }`}
+                    />
+                    <span>Employee Profile</span>
+                  </div>
                 )}
-              </button>
-
-              {/* Dropdown Items */}
-              <div
-                className={`flex flex-col gap-4 ml-5 pl-4 border-l border-l-gray-300 transition-all duration-300 ${
-                  isEPDropdownOpen
-                    ? "max-h-40 opacity-100"
-                    : "max-h-0 opacity-0 overflow-hidden"
-                }`}
-              >
-                <Link className="text-sm text-fontc">Department 1</Link>
-                <Link className="text-sm text-fontc">Department 2</Link>
-                <Link className="text-sm text-fontc">Department 3</Link>
-              </div>
+              </NavLink>
             </div>
           </div>
 
@@ -146,33 +140,32 @@ export default function Sidebar() {
             </div>
             <div className="dshb-lnk font-heading flex items-center gap-2">
               <HiOutlineWallet className="text-xl text-gray-500" />
-              <Link className="text-base text-fontc">Compensation</Link>
+              <NavLink className="text-base text-fontc">Compensation</NavLink>
             </div>
             <div className="dshb-lnk font-heading flex items-center gap-2">
               <LuClipboardList className="text-xl text-gray-500" />
-              <Link className="text-base text-fontc">Ledger</Link>
+              <NavLink className="text-base text-fontc">Ledger</NavLink>
             </div>
             <div className="dshb-lnk font-heading flex items-center gap-2">
               <TbReportSearch className="text-xl text-gray-500" />
-              <Link className="text-base text-fontc">Reports</Link>
+              <NavLink className="text-base text-fontc">Reports</NavLink>
             </div>
             <div className="dshb-lnk font-heading flex items-center gap-2">
               <MdOutlineFeedback className="text-xl text-gray-500" />
-              <Link className="text-base text-fontc">Feedback</Link>
+              <NavLink className="text-base text-fontc">Feedback</NavLink>
             </div>
           </div>
 
           <div className="user-deets flex gap-4 items-center -mx-4 mt-12 xl:mt-70 lg:hidden bg-bgshade py-3 px-6">
             <div className="img-container w-12 h-12">
-                <img src={pfpimg}
-                 alt=""
-                 className="w-full h-auto rounded-full object-cover"
-                 />
+              <img
+                src={pfpimg}
+                alt=""
+                className="w-full h-auto rounded-full object-cover"
+              />
             </div>
             <div className="user-name">
-                <h3
-                className="text-primary font"
-                >Andrea Suello</h3>
+              <h3 className="text-primary font">Andrea Suello</h3>
             </div>
           </div>
         </div>

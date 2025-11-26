@@ -3,15 +3,15 @@ import { Link } from "react-router-dom";
 import { IoChevronDown, IoChevronUp } from "react-icons/io5";
 import pfpimg from "../assets/ds1232.jpg";
 
-export default function TopCard() {
+export default function TopCard({title}) {
   const [dropDowned, setDropDowned] = useState(false);
 
   return (
     <div className="topCard-container relative bg-bg p-4 hidden md:flex shadow-md rounded-md items-center justify-between">
       <div className="Pg-name">
-        <Link className="text-primary text-xl font-heading font-semibold">
-          DASHBOARD
-        </Link>
+        <p className="text-primary text-xl font-heading font-semibold">
+          {title}
+        </p>
       </div>
 
       <div className="user-dets flex items-center">

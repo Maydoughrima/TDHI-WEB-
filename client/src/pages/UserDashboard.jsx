@@ -14,7 +14,7 @@ export default function UserDashboard() {
         {/* Page Layout */}
         <div className="container flex flex-col gap-6">
           {/* Top bar */}
-          <TopCard />
+          <TopCard title="DASHBOARD" />
 
           {/* Dashboard Cards (Grid) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
