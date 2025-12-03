@@ -105,18 +105,19 @@ export default function PayrollFormModal({ isOpen, onClose, onSubmit }) {
 
               <div className="flex justify-end gap-3 mt-6">
                 <button
+                  type="submit"
+                  className="px-4 py-2 text-bg rounded-lg bg-accent text-white shadow-md"
+                >
+                  Process
+                </button>   
+                
+                <button
                   type="button"
                   className="px-4 py-2 text-fontc rounded-lg bg-gray-200 shadow-md"
                   onClick={onClose}
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-bg rounded-lg bg-accent text-white shadow-md"
-                >
-                  Process
-                </button>   
               </div>
             </form>
           </motion.div>

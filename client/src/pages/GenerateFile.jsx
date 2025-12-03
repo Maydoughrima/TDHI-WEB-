@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import TopCard from "../components/TopCard";
-import Sidebar from "../components/SideBar";
+import TopCard from "../components/Layout/TopCard";
+import Sidebar from "../components/Layout/SideBar";
 import { LuRefreshCcw } from "react-icons/lu";
-import GenerateFileTable from "../components/GenerateFileTable";
-import GenerateFCTA from "../components/GenerateFCTA";
-import GeneratePayrollModal from "../components/GeneratePayrollModal";
+import GenerateFileTable from "../components/Composite/GenerateFileTable";
+import GenerateFCTA from "../components/Layout/GenerateFCTA";
+import GeneratePayrollModal from "../components/UI/GeneratePayrollModal";
 
 export default function GenerateFiles() {
   const [open, setOpen] = useState(false);

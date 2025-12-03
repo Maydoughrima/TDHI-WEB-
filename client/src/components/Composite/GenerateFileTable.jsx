@@ -22,33 +22,42 @@ export default function GenerateFileTable() {
           {/* PAYROLL FILE */}
           <button
             onClick={() => setActiveTab("payroll")}
-            className={`flex flex-1 items-center justify-center gap-2 text-sm text-fontc font-heading py-3
-        ${activeTab === "payroll" ? "bg-gray-400" : ""}
+            className={`flex flex-1 items-center justify-center gap-2 text-sm font-heading py-3
+        ${activeTab === "payroll" ? "bg-accent text-bg" : "text-fontc"}
       `}
           >
-            <FaRegFile />
+            <FaRegFile className={`${activeTab === "payroll" ? "text-bg" : "text-fontc"}
+            `} />
             Payroll File
           </button>
 
           {/* EMPLOYEES */}
           <button
             onClick={() => setActiveTab("employee")}
-            className={`flex flex-1 items-center justify-center gap-2 text-sm text-fontc font-heading py-3
-        ${activeTab === "employee" ? "bg-gray-400" : ""}
+            className={`flex flex-1 items-center justify-center gap-2 text-sm font-heading py-3
+        ${activeTab === "employee" ? "bg-accent text-bg" : "text-fontc"}
       `}
           >
-            <BsPeople />
+            <BsPeople
+              className={`${
+                activeTab === "employee" ? "text-bg" : "text-fontc"
+              }`}
+            />
             Employees
           </button>
 
           {/* TRANSACTION */}
           <button
             onClick={() => setActiveTab("transaction")}
-            className={`flex flex-1 items-center justify-center gap-2 text-sm text-fontc font-heading py-3
-        ${activeTab === "transaction" ? "bg-gray-400" : ""}
-      `}
+            className={`flex flex-1 items-center justify-center gap-2 text-sm font-heading py-3
+    ${activeTab === "transaction" ? "bg-accent text-bg" : "text-fontc"}
+  `}
           >
-            <LuHistory />
+            <LuHistory
+              className={`${
+                activeTab === "transaction" ? "text-bg" : "text-fontc"
+              }`}
+            />
             Transaction
           </button>
         </div>
@@ -64,13 +73,11 @@ export default function GenerateFileTable() {
         </div>
       </div>
 
-
       <div className="mt-4">
         {activeTab === "payroll" && <PayrollTable />}
-         {activeTab === "employee" && <EmployeeTable />}
-         {activeTab === "transaction" && <TransactionsTable />}
+        {activeTab === "employee" && <EmployeeTable />}
+        {activeTab === "transaction" && <TransactionsTable />}
       </div>
-
     </div>
   );
 }

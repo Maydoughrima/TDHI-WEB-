@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import logo from "../assets/logo.png";
+import logo from "../../assets/logo.png";
 import { Link, NavLink } from "react-router-dom";
 import { LuHouse, LuFileCog } from "react-icons/lu";
 import { FaRegFile } from "react-icons/fa";
@@ -9,7 +9,7 @@ import { HiOutlineWallet } from "react-icons/hi2";
 import { LuClipboardList } from "react-icons/lu";
 import { TbReportSearch } from "react-icons/tb";
 import { MdOutlineFeedback } from "react-icons/md";
-import pfpimg from "../assets/ds1232.jpg";
+import pfpimg from "../../assets/ds1232.jpg";
 
 export default function Sidebar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);

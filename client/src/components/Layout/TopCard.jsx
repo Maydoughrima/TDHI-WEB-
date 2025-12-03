@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { IoChevronDown, IoChevronUp } from "react-icons/io5";
-import pfpimg from "../assets/ds1232.jpg";
+import pfpimg from "../../assets/ds1232.jpg";
 
 export default function TopCard({title}) {
   const [dropDowned, setDropDowned] = useState(false);

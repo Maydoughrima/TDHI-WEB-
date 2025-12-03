@@ -1,9 +1,11 @@
-import React from "react";
-import TopCard from "../components/TopCard";
-import Sidebar from "../components/SideBar";
-import EmployeeProfCard from "../components/EmployeeProfCard";
+import React, { useState } from "react";
+import TopCard from "../components/Layout/TopCard";
+import Sidebar from "../components/Layout/SideBar";
+import EmployeeProfCard from "../components/Layout/EmployeeProfCard";
+import PersonalInformation from "../components/Composite/PersonalInformation";
 
 export default function EmployeeProfile() {
+   const [open, setOpen] = useState(false); // <-- REQUIRED
   return (
     <div className="flex flex-col md:flex-row gap-2 px-2 md:py-0 md:px-0">
       <Sidebar />
@@ -12,9 +14,14 @@ export default function EmployeeProfile() {
         <div className="container flex flex-col gap-6">
           <TopCard title="GENERATE FILE" />
 
-          <div className="">
+          <div className="inputbox-container">
             {/*CTA CARD CONTAINTER*/}
             <EmployeeProfCard onClick={() => setOpen(true)} />
+          </div>
+
+          <div className="content-container flex "> 
+            {/*CONTENT CARDS CONTAINER*/}
+            <PersonalInformation />
           </div>
         </div>
       </div>
