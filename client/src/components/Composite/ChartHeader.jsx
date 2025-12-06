@@ -16,9 +16,11 @@ export default function ChartHeader({onClick}) {
       <div className="cta-select-date">
         <Button 
         onClick={onClick}
-        className="bg-white flex text-primary rounded-2xl border border-gray-200 shadow-sm"
+        className="flex text-bg bg-secondary rounded-2xl border border-gray-200 shadow-sm"
         >Last 30 Days
-        <RiArrowDropDownLine/>
+        <RiArrowDropDownLine
+        className="text-base"
+        />
         </Button>
       </div>
     </div>

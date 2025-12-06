@@ -76,12 +76,16 @@ export default function TransactionHistory({ onClick }) {
 
             {/* BUTTON (MOBILE) */}
             <div className="md:hidden">
-              <Button onClick={onClick}>View Details</Button>
+              <Button onClick={onClick}
+              className="bg-secondary"
+              >View Details</Button>
             </div>
 
             {/* BUTTON (DESKTOP) */}
             <div className="hidden md:block">
-              <Button onClick={onClick}>View Details</Button>
+              <Button onClick={onClick}
+              className="bg-secondary"
+              >View Details</Button>
             </div>
           </div>
         ))}

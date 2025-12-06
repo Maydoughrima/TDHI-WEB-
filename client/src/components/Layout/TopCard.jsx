@@ -9,7 +9,7 @@ export default function TopCard({title}) {
   return (
     <div className="topCard-container relative bg-bg p-4 hidden md:flex shadow-md rounded-md items-center justify-between">
       <div className="Pg-name">
-        <p className="text-primary text-xl font-heading font-semibold">
+        <p className="text-secondary text-xl font-heading font-semibold">
           {title}
         </p>
       </div>

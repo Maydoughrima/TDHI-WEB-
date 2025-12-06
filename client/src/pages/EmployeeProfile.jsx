@@ -3,6 +3,8 @@ import TopCard from "../components/Layout/TopCard";
 import Sidebar from "../components/Layout/SideBar";
 import EmployeeProfCard from "../components/Layout/EmployeeProfCard";
 import PersonalInformation from "../components/Composite/PersonalInformation";
+import EmpPayrollInfo from "../components/Composite/EmpPayrollInfo";
+
 
 export default function EmployeeProfile() {
    const [open, setOpen] = useState(false); // <-- REQUIRED
@@ -12,16 +14,17 @@ export default function EmployeeProfile() {
       <div className="bg-bgshade min-h-screen w-full md:px-4">
         {/* PAGE LAYOUT */}
         <div className="container flex flex-col gap-6">
-          <TopCard title="GENERATE FILE" />
+          <TopCard title="EMPLOYEE PROFILE" />
 
           <div className="inputbox-container">
             {/*CTA CARD CONTAINTER*/}
             <EmployeeProfCard onClick={() => setOpen(true)} />
           </div>
 
-          <div className="content-container flex "> 
+          <div className="content-container flex flex-col gap-2"> 
             {/*CONTENT CARDS CONTAINER*/}
             <PersonalInformation />
+            <EmpPayrollInfo />
           </div>
         </div>
       </div>
