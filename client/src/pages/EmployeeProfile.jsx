@@ -7,7 +7,10 @@ import EmpPayrollInfo from "../components/Composite/EmpPayrollInfo";
 
 
 export default function EmployeeProfile() {
+  const [isEditing, setIsEditing] = useState(false); // State to manage lock textfield
    const [open, setOpen] = useState(false); // <-- REQUIRED
+
+   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null); // Example employee ID
   return (
     <div className="flex flex-col md:flex-row gap-2 px-2 md:py-0 md:px-0">
       <Sidebar />
@@ -18,13 +21,23 @@ export default function EmployeeProfile() {
 
           <div className="inputbox-container">
             {/*CTA CARD CONTAINTER*/}
-            <EmployeeProfCard onClick={() => setOpen(true)} />
+            <EmployeeProfCard onClick={() => 
+              setOpen(true)} 
+              onEdit={() =>  
+              setIsEditing(true)}
+              onSelectEmployee = {setSelectedEmployeeId} />
           </div>
 
           <div className="content-container flex flex-col gap-2"> 
             {/*CONTENT CARDS CONTAINER*/}
-            <PersonalInformation />
-            <EmpPayrollInfo />
+            <PersonalInformation
+             isEditing={isEditing}
+             selectedEmployeeId = {selectedEmployeeId}
+             />
+            <EmpPayrollInfo
+            isEditing={isEditing}
+            selectedEmployeeId = {selectedEmployeeId}
+            />
           </div>
         </div>
       </div>

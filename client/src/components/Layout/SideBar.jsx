@@ -139,10 +139,6 @@ export default function Sidebar() {
               <Link>Entry/ Ledger/ Payslip</Link>
             </div>
             <div className="dshb-lnk font-heading flex items-center gap-2">
-              <HiOutlineWallet className="text-xl text-gray-500" />
-              <NavLink className="text-base text-fontc">Compensation</NavLink>
-            </div>
-            <div className="dshb-lnk font-heading flex items-center gap-2">
               <LuClipboardList className="text-xl text-gray-500" />
               <NavLink className="text-base text-fontc">Ledger</NavLink>
             </div>

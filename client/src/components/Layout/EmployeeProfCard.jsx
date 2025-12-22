@@ -3,7 +3,7 @@ import { FaRegEdit } from "react-icons/fa";
 import { RiUserAddLine } from "react-icons/ri";
 import AddEmployeeModal from "../UI/AddEmployeeModal";
 
-export default function EmployeeProfCard({ onClick }) {
+export default function EmployeeProfCard({ onClick, onEdit, onSelectEmployee }) {
   const [departments, setDepartments] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [selectedDept, setSelectedDept] = useState("");
@@ -69,7 +69,10 @@ export default function EmployeeProfCard({ onClick }) {
         <select
           className="border rounded-lg p-2 bg-white text-sm w-full sm:w-auto"
           value={selectedEmployee}
-          onChange={(e) => setSelectedEmployee(e.target.value)}
+          onChange={(e) => {
+            setSelectedEmployee(e.target.value);
+            onSelectEmployee(e.target.value); //sendId to parent
+          }}
           disabled={!selectedDept}
         >
           <option value="">Select Employee</option>
@@ -92,7 +95,7 @@ export default function EmployeeProfCard({ onClick }) {
         </button>
 
         <button
-          onClick={onClick}
+          onClick={onEdit}
           className="border border-gray-300 px-4 py-2 flex gap-2 items-center justify-center text-secondary rounded-md w-full sm:w-auto"
         >
           Edit Details <FaRegEdit className="text-base text-secondary" />

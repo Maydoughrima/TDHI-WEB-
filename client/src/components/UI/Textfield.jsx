@@ -7,6 +7,7 @@ export default function TextField({
   placeholder = "",
   type = "text",
   className = "",
+  disabled = false,
 }) {
   return (
     <div className={`flex items-center gap-4 min-w-0 ${className}`}>
@@ -19,6 +20,7 @@ export default function TextField({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
+        disabled={disabled}
         className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:outline-none m-w-[200px]"
       />
     </div>
