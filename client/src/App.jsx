@@ -7,6 +7,8 @@ import UserDashboard from './pages/UserDashboard.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import GenerateFiles from './pages/GenerateFile.jsx';
 import EmployeeProfile from './pages/EmployeeProfile.jsx';
+import Ledger from './pages/Ledger.jsx';
+import Reports from './pages/Reports.jsx';
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
           <Route path="/user/dashboard" element={<UserDashboard />} />
           <Route path ="/user/generatefile" element={<GenerateFiles/>}/>
           <Route path ="/user/employeeprofile" element={<EmployeeProfile/>}/>
+          <Route path ="/user/ledger" element={<Ledger/>}/>
+          <Route path ="/user/reports" element={<Reports/>}/>
         </Routes>
       </Router>
     </div>

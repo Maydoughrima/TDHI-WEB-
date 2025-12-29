@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Button from "../UI/Button";
 import { IoIosArrowForward, IoIosArrowBack } from "react-icons/io";
 
-// COMPONENTS
 import PersonalDetailsModal from "../Composite/PersonalDetailsModal";
 import PayrollInfoModal from "../Composite/PayrollInfoModal";
 import UploadImageModal from "../Composite/UploadImageModal";
@@ -27,7 +26,6 @@ export default function AddEmployeeModal({ isOpen, onClose }) {
     citizenship: "",
     spouseAddress: "",
     contactNo: "",
-
     employeeStatus: "",
     designation: "",
     basicRate: "",
@@ -59,21 +57,7 @@ export default function AddEmployeeModal({ isOpen, onClose }) {
     setLoading(true);
 
     try {
-      /* BACKEND (commented)
-      const formData = new FormData();
-      Object.keys(form).forEach((key) => formData.append(key, form[key]));
-      if (employeeImage) formData.append("image", employeeImage);
-
-      const res = await fetch("/api/employees", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error("Failed to save employee");
-      */
-
-      console.log("SUBMIT:", { ...form, employeeImage });
-
+      console.log("SUBMIT DATA:", { ...form, employeeImage });
       setLoading(false);
       resetAndClose();
     } catch (err) {
@@ -86,7 +70,7 @@ export default function AddEmployeeModal({ isOpen, onClose }) {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* BACKDROP */}
+          {/* DARK BACKDROP */}
           <motion.div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
             onClick={resetAndClose}
@@ -95,16 +79,25 @@ export default function AddEmployeeModal({ isOpen, onClose }) {
             exit={{ opacity: 0 }}
           />
 
-          {/* MODAL */}
+          {/* 🌟 FIXED SCROLLABLE MODAL WRAPPER */}
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center overflow-auto p-4"
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
+            className="fixed inset-0 z-50 flex justify-center items-start overflow-y-auto p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           >
-            <form
+            {/* 🌟 INNER MODAL — SCROLLABLE BUT UI UNCHANGED */}
+            <motion.form
               onSubmit={handleSubmit}
-              className="bg-white rounded-xl shadow-xl p-8 w-full max-w-6xl"
+              className="
+                bg-white rounded-xl shadow-xl 
+                w-full max-w-6xl 
+                p-8 
+                mt-10 mb-10   /* spacing for scroll */
+              "
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
             >
               {/* HEADER */}
               <h2 className="text-xl font-bold text-primary text-center">
@@ -123,8 +116,6 @@ export default function AddEmployeeModal({ isOpen, onClose }) {
               {step === 1 && (
                 <>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-
-                    {/* 2-COLUMN PERSONAL FORM */}
                     <div className="lg:col-span-2">
                       <PersonalDetailsModal
                         form={form}
@@ -132,7 +123,6 @@ export default function AddEmployeeModal({ isOpen, onClose }) {
                       />
                     </div>
 
-                    {/* IMAGE UPLOAD */}
                     <div className="flex justify-center items-start">
                       <UploadImageModal
                         selectedFile={employeeImage}
@@ -194,7 +184,7 @@ export default function AddEmployeeModal({ isOpen, onClose }) {
                   </div>
                 </>
               )}
-            </form>
+            </motion.form>
           </motion.div>
         </>
       )}

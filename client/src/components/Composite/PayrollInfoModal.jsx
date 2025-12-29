@@ -1,15 +1,22 @@
 import React from "react";
 import TextField from "../UI/Textfield";
+import Dropdown from "../UI/Dropdown";
 
 export default function PayrollInfoModal({ form, handleChange }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* LEFT COLUMN */}
       <div className="flex flex-col gap-4">
-        <TextField
+        <Dropdown
           label="Employee Status"
           value={form.employeeStatus || ""}
           onChange={(e) => handleChange("employeeStatus", e.target.value)}
+          options={[
+              {value: "Regular", label: "Regular"},
+              {value: "Probitionary", label: "Probitionary"},
+              {value: "Reliever", label: "Reliever"},
+              {value: "Consultancy", label: "Consultancy"},
+            ]}
         />
 
         <TextField

@@ -1,7 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [ "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",],
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
@@ -13,21 +12,29 @@ export default {
         accent: "#00B4D8",
         bgshade: "#e9ecef",
         fontc: "#001219",
-    },
-    fontFamily: {
-      heading: ["Roboto", "sans-serif"],
-      body: ["Montserrat", "sans-serif"],
-  },
-  screens: {
-    sm: '320px',
-    lm: '425px',
-    md: '768px',
-    lg: '1024px',
-    xl: '1440px',
-    xxl: '2560px',
-  },
-},
-},
-  plugins: [],
-}
+      },
+      fontFamily: {
+        heading: ["Roboto", "sans-serif"],
+        body: ["Montserrat", "sans-serif"],
+      },
+      screens: {
+        sm: "320px",
+        lm: "425px",
+        md: "768px",
+        lg: "1024px",
+        xl: "1440px",
+        xxl: "2560px",
+      },
 
+      fadeSlideIn: {
+        "0%": { opacity: 0, transform: "translateX(20px)" },
+        "100%": { opacity: 1, transform: "translateX(0)" },
+      },
+
+      animation: {
+        fadeSlideIn: 'fadeSlideIn 0.45s ease-out',
+      },
+    },
+  },
+  plugins: [],
+};

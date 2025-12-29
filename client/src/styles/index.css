@@ -11,3 +11,18 @@
     height: 60px;
     width: 60px;
 }
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0px);
+  }
+}
+
+.animate-fadeSlideIn {
+  animation: fadeSlideIn ease-out forwards;
+}

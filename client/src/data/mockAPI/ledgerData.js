@@ -1,0 +1,92 @@
+// This mimics what your BACKEND will return
+// One row = one employee under a paycode
+
+export const ledgerData = [
+  {
+    id: 1,
+    employeeNo: "20462",
+    employeeName: "Ray Smith",
+    avatar: "/avatars/user1.png",
+    departmentId: "1",
+    paycode: "P24062",
+    department: "HR",
+    
+
+    // deductions
+    late: 0.0,
+    sss: 0.0,
+    philhealth: 286.97,
+    hdmf_prem: 286.97,
+    hdmf_loan: 286.97,
+    hdmf_cal: 286.97,
+    sss_loan: 286.97,
+    sss_cal: 129.97,
+    hospt_act: 486.97,
+    canteen: 86.97,
+    hsbc: 186.97,
+    coop: 386.97,
+    leave: 86.97,
+    others: 86.97,
+    netpay: 15000.0,
+
+    //earnings
+    basicPay: 20000.0,
+    overtime: 1500.0,
+    n_prem: 500.0,
+    regHoliday: 800.0,
+    foodAllowance: 1200.0,
+    otherAllowance: 700.0,
+    onCall: 300.0,
+    otherFarn: 400.0,
+    allowance_adj: 200.0,
+    grossSalary: 25000.0,
+  },
+  {
+    id: 2,
+    employeeNo: "20462",
+    employeeName: "Ray Smith",
+    avatar: "/avatars/user1.png",
+    departmentId: "2",
+    department: "Finance",
+    paycode: "P24062",
+
+    late: 0.0,
+    sss: 0.0,
+    philhealth: 123.21,
+    hdmf_prem: 123.21,
+    hdmf_loan: 123.21,
+    hdmf_cal: 123.21,
+  },
+  {
+    id: 3,
+    employeeNo: "20463",
+    employeeName: "John Santos",
+    avatar: "/avatars/user2.png",
+    departmentId: "3",
+    department: "IT Department",
+    paycode: "P24062",
+
+    late: 0.0,
+    sss: 0.0,
+    philhealth: 121.0,
+    hdmf_prem: 121.0,
+    hdmf_loan: 121.0,
+    hdmf_cal: 121.0,
+  },
+  {
+    id: 4,
+    employeeNo: "20464",
+    employeeName: "Den Abe",
+    avatar: "/avatars/user3.png",
+    departmentId: "3",
+    department: "IT Department",
+    paycode: "P24062",
+
+    late: 0.0,
+    sss: 0.0,
+    philhealth: 90.2,
+    hdmf_prem: 90.2,
+    hdmf_loan: 90.2,
+    hdmf_cal: 90.2,
+  },
+];
