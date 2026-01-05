@@ -6,6 +6,7 @@ import { FaRegFile } from "react-icons/fa";
 import { IoMenu, IoClose } from "react-icons/io5";
 import { GoPeople } from "react-icons/go";
 import { TbReportSearch } from "react-icons/tb";
+import { GrTransaction } from "react-icons/gr";
 import { MdOutlineFeedback } from "react-icons/md";
 import pfpimg from "../../assets/ds1232.jpg";
 
@@ -135,6 +136,18 @@ export default function Sidebar() {
             >
               <MdOutlineFeedback className="text-xl shrink-0 text-gray-500" />
               <span className="font-heading">Feedback</span>
+            </NavLink>
+
+            <NavLink
+              to="/user/transactions"
+              className={({ isActive }) =>
+                `${navItemBase} ${
+                  isActive ? "bg-accent text-white" : "text-black"
+                }`
+              }
+            >
+              <GrTransaction className="text-xl shrink-0" />
+              <span className="font-heading">Transaction History</span>
             </NavLink>
           </div>
 

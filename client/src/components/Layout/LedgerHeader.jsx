@@ -17,7 +17,7 @@ export default function LedgerHeader({ filters, onChange }) {
   };
 
   return (
-    <div className="bg-white p-4 rounded-md shadow-md flex flex-col md:flex-row gap-4">
+    <div className="bg-white p-4 rounded-md shadow-md flex flex-col md:flex-row gap-4 print:hidden">
       
       {/* ✅ Department */}
       <select

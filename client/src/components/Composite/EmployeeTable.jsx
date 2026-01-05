@@ -1,53 +1,118 @@
 import { useEffect, useState } from "react";
-import { FaRegEdit } from "react-icons/fa";
-import { employees as mockEmployee } from "../../data/employee";;
+import { allEmployees } from "../../data/mockAPI/allemployee";
+import EmployeePayrollModal from "../UI/EmployeePayrollModal";
 
-export default function EmployeeTable() {
-  const [employee, setEmployee] = useState([]);
+/**
+ * COLUMN CONFIG
+ * (UNCHANGED – consistent with your other tables)
+ */
+const employeeColumns = [
+  { label: "Employee No.", key: "employeeNo", align: "left" },
+  { label: "Employee Name", key: "name", align: "left" },
+  { label: "Department", key: "department", align: "left" },
+  { label: "Employee Status", key: "employeeStatus", align: "left" },
+  { label: "Payroll Status", key: "payroll_status", align: "left" },
+];
 
-  // Fetch payroll data from backend API
+export default function EmployeeTable({ payroll }) {
+  const [rows, setRows] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [open, setOpen] = useState(false);
+
+  /* =====================================================
+     FETCH EMPLOYEES (MOCK → API LATER)
+     ===================================================== */
   useEffect(() => {
-      setEmployee(mockEmployee);
+    /**
+     * BACKEND READY
+     * GET /api/employees
+     */
+    setRows(allEmployees);
   }, []);
 
+  /* =====================================================
+     OPEN MODAL
+     ===================================================== */
+  const handleOpenEmployee = (employee) => {
+    setSelectedEmployee(employee);
+    setOpen(true);
+  };
+
+  console.log("PAYROLL PROP:", payroll);
+
+  /* =====================================================
+     CLOSE MODAL
+     ===================================================== */
+  const handleClose = () => {
+    setOpen(false);
+    setSelectedEmployee(null);
+  };
+
   return (
-    <div className="overflow-x-auto bg-white rounded-md shadow-sm">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Employee No.</th>
-            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Employee Name</th>
-            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Department</th>
-            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Employee Status</th>
-            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Payroll Status</th>
-            <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">Action</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {employee.length === 0 ? (
+    <>
+      {/* ================= TABLE ================= */}
+      <div className="overflow-x-auto bg-white rounded-md shadow-sm">
+        <table className="min-w-full divide-y divide-gray-200">
+          {/* HEADER */}
+          <thead className="bg-gray-50">
             <tr>
-              <td colSpan="8" className="px-4 py-4 text-center text-gray-500">
-                No Employees found.
-              </td>
+              {employeeColumns.map((col) => (
+                <th
+                  key={col.key}
+                  className={`px-4 py-2 text-sm font-semibold text-gray-700 ${
+                    col.align === "center" ? "text-center" : "text-left"
+                  }`}
+                >
+                  {col.label}
+                </th>
+              ))}
             </tr>
-          ) : (
-            employee.map((employees) => (
-              <tr key={employees.employeeNum} className="hover:bg-gray-50">
-                <td className="px-4 py-2 text-sm text-fontc">{employees.id}</td>
-                <td className="px-4 py-2 text-sm text-fontc">{employees.Name}</td>
-                <td className="px-4 py-2 text-sm text-fontc">{employees.department}</td>
-                <td className="px-4 py-2 text-sm text-fontc text-left">{employees.employee_status}</td>
-                <td className="px-4 py-2 text-sm text-fontc text-left">{employees.payroll_status}</td>
-                <td className="px-4 py-2 text-center">
-                  <button className="text-accent hover:text-blue-700">
-                    <FaRegEdit />
-                  </button>
+          </thead>
+
+          {/* BODY */}
+          <tbody className="divide-y divide-gray-200">
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={employeeColumns.length}
+                  className="px-4 py-4 text-center text-gray-500"
+                >
+                  No employees found.
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+            ) : (
+              rows.map((row) => (
+                <tr
+                  key={row.id}
+                  onClick={() => handleOpenEmployee(row)}
+                  className="hover:bg-gray-50 cursor-pointer"
+                >
+                  {employeeColumns.map((col) => (
+                    <td
+                      key={col.key}
+                      className="px-4 py-2 text-sm text-fontc"
+                    >
+                      {row[col.key] ?? "-"}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      
+
+      {/* ================= MODAL ================= */}
+      {open && selectedEmployee && (
+        <EmployeePayrollModal
+          isOpen={open}
+          onClose={handleClose}
+          employee={selectedEmployee}
+          payroll={payroll}
+        />  
+      )}
+      
+    </>
   );
 }

@@ -7,6 +7,7 @@ import UserDashboard from './pages/UserDashboard.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import GenerateFiles from './pages/GenerateFile.jsx';
 import EmployeeProfile from './pages/EmployeeProfile.jsx';
+import Transactions from './pages/Transactions.jsx';
 import Ledger from './pages/Ledger.jsx';
 import Reports from './pages/Reports.jsx';
 
@@ -22,6 +23,7 @@ function App() {
           <Route path ="/user/employeeprofile" element={<EmployeeProfile/>}/>
           <Route path ="/user/ledger" element={<Ledger/>}/>
           <Route path ="/user/reports" element={<Reports/>}/>
+          <Route path ="/user/transactions" element={<Transactions/>}/>
         </Routes>
       </Router>
     </div>
