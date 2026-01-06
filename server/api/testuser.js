@@ -1,5 +1,5 @@
 // testUser.js
-import { pool } from "../config/db.js";
+import pool from "../config/db.js";
 import bcrypt from "bcrypt";
 
 async function createTestUser() {
@@ -7,14 +7,15 @@ async function createTestUser() {
     const username = "testuser2";
     const password = "password1234"; // plain text
     const fullname = "John Doed";
+    const role = "user";
 
     // hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // insert into users table
     const result = await pool.query(
-      "INSERT INTO users (username, password_hash, fullname) VALUES ($1, $2, $3) RETURNING *",
-      [username, hashedPassword, fullname]
+      `INSERT INTO users (username, fullname, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING *`,
+      [username, fullname, hashedPassword, role]
     );
 
     console.log("Test user created:", result.rows[0]);

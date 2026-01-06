@@ -89,7 +89,7 @@
   #ledger-print td:nth-child(3),
   #ledger-print th:nth-child(4),
   #ledger-print td:nth-child(4) {
-    text-align: left;
+    text-align: center;
   }
 
   #ledger-print th:last-child,
