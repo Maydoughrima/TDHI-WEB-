@@ -2,11 +2,12 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
-dotenv.config();
 
 //import user api route 
 import userRoutes from "./api/user.js";
+import transactionRoutes from "./api/transactions.js";
 
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +23,7 @@ app.get("/", (req,res) =>{
 
 //mount api routes under /api user
 app.use("/api", userRoutes);
+app.use("/api", transactionRoutes);
 
 //start server
 app.listen(PORT, () => {

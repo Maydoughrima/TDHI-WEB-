@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import { pool } from './config/db.js';
+import { pool } from "./config/db.js";
 
 const saltRounds = 10; //set hashing complexity
 

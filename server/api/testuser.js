@@ -1,5 +1,5 @@
 // testUser.js
-import pool from "../config/db.js";
+import { pool } from "../config/db.js";
 import bcrypt from "bcrypt";
 
 async function createTestUser() {

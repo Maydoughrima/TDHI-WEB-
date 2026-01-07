@@ -71,7 +71,7 @@ export const recentTransactionsMock = [
       department: "HR Department",
       avatar: "/avatar/Arcayna,%20Royce%20Ni%C3%B1o.png",
     },
-    action: "ADD",
+    action: "EDIT",
     entity: "Payroll",
     referenceCode: "#0008",
     status: "COMPLETED",

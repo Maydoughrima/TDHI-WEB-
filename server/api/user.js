@@ -1,5 +1,5 @@
 import express from "express";
-import pool from "../config/db.js";
+import { pool } from "../config/db.js";
 import bcrypt from "bcrypt";
 
 // ✅ AUDIT LOG SERVICE
