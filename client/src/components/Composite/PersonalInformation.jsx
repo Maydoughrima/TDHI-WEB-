@@ -10,6 +10,8 @@ import { fetchEmployeeById } from "../../../../server/api/employeeAPI";
 export default function PersonalInformation({
   isEditing,
   selectedEmployeeId,
+  selectedFile,
+  setSelectedFile,
   goNext,
 }) {
   const [form, setForm] = useState({
@@ -33,7 +35,7 @@ export default function PersonalInformation({
   const [imageUrl, setImageUrl] = useState(null);
   
   //img preview
-  const [selectedFile, setSelectedFile] = useState(null);
+
 
   // ✅ FETCH FROM BACKEND WHEN EMPLOYEE CHANGES
   useEffect(() => {

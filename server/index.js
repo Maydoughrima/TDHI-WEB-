@@ -26,6 +26,7 @@ app.get("/", (req,res) =>{
 app.use("/api", userRoutes);
 app.use("/api", transactionRoutes);
 app.use("/api", employeeRoutes);    
+app.use("/uploads", express.static("uploads"));
 
 //start server
 app.listen(PORT, () => {

@@ -1,16 +1,37 @@
 import express from "express";
 import { pool } from "../config/db.js";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 const router = express.Router();
 
-/**
- * ======================================================
- * GET /api/departments
- * PURPOSE:
- * - Populate Department dropdown
- * - Driven by existing employees
- * ======================================================
- */
+/* ======================================================
+   IMAGE UPLOAD CONFIG
+====================================================== */
+
+const uploadDir = "uploads/employeeImages";
+
+// ensure folder exists
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `emp_${req.params.id}_${Date.now()}${ext}`);
+  },
+});
+
+const upload = multer({ storage });
+
+/* ======================================================
+   GET /api/departments
+====================================================== */
 router.get("/departments", async (req, res) => {
   try {
     const result = await pool.query(`
@@ -30,16 +51,9 @@ router.get("/departments", async (req, res) => {
   }
 });
 
-/**
- * ======================================================
- * GET /api/employees
- * PURPOSE:
- * - Populate Employee dropdown
- * - Filtered by department
- * ======================================================
- * QUERY PARAMS:
- * - department (required)
- */
+/* ======================================================
+   GET /api/employees
+====================================================== */
 router.get("/employees", async (req, res) => {
   try {
     const { department } = req.query;
@@ -53,11 +67,7 @@ router.get("/employees", async (req, res) => {
 
     const result = await pool.query(
       `
-      SELECT
-        id,
-        employee_no,
-        full_name,
-        position
+      SELECT id, employee_no, full_name, position
       FROM employees
       WHERE department = $1
       ORDER BY full_name ASC
@@ -65,24 +75,16 @@ router.get("/employees", async (req, res) => {
       [department]
     );
 
-    res.json({
-      success: true,
-      data: result.rows,
-    });
+    res.json({ success: true, data: result.rows });
   } catch (error) {
     console.error("Fetch employees error:", error);
     res.status(500).json({ success: false });
   }
 });
 
-/**
- * ======================================================
- * GET /api/employees/:id
- * PURPOSE:
- * - Auto-fill Employee Profile page
- * - Personal Info + Payroll Info
- * ======================================================
- */
+/* ======================================================
+   GET /api/employees/:id
+====================================================== */
 router.get("/employees/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -90,7 +92,6 @@ router.get("/employees/:id", async (req, res) => {
     const result = await pool.query(
       `
       SELECT
-        -- Personal Information
         e.id,
         e.employee_no,
         e.full_name,
@@ -101,13 +102,13 @@ router.get("/employees/:id", async (req, res) => {
         e.address,
         e.place_of_birth,
         e.date_of_birth,
+        e.date_hired,
         e.civil_status,
         e.citizenship,
         e.spouse_name,
         e.spouse_address,
         e.image_url,
 
-        -- Payroll Information
         ep.employment_status,
         ep.designation,
         ep.basic_rate,
@@ -118,7 +119,6 @@ router.get("/employees/:id", async (req, res) => {
         ep.pagibig_no,
         ep.philhealth_no,
         ep.tin_no
-
       FROM employees e
       LEFT JOIN employee_payroll ep
         ON ep.employee_id = e.id
@@ -128,53 +128,54 @@ router.get("/employees/:id", async (req, res) => {
     );
 
     if (!result.rows.length) {
-      return res.status(404).json({
-        success: false,
-        message: "Employee not found",
-      });
+      return res.status(404).json({ success: false });
     }
 
-    res.json({
-      success: true,
-      data: result.rows[0],
-    });
+    res.json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error("Fetch employee profile error:", error);
     res.status(500).json({ success: false });
   }
 });
 
-//payroll
-router.get("/employees/:id/payroll", async (req, res) => {
-  try {
-    const { id } = req.params;
+/* ======================================================
+   PATCH /api/employees/:id/image
+   PURPOSE: Save IMAGE ONLY
+====================================================== */
+router.patch(
+  "/employees/:id/image",
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
 
-    const result = await pool.query(
-      `
-      SELECT
-        employment_status,
-        designation,
-        basic_rate,
-        daily_rate,
-        hourly_rate,
-        leave_credits,
-        sss_no,
-        hdmf_no,
-        tin_no
-      FROM employee_payroll
-      WHERE employee_id = $1
-      `,
-      [id]
-    );
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "No image uploaded",
+        });
+      }
 
-    return res.json({
-      success: true,
-      data: result.rows[0] || null,
-    });
-  } catch (error) {
-    console.error("Fetch payroll info error:", error);
-    res.status(500).json({ success: false });
+      const imageUrl = `/uploads/employeeImages/${req.file.filename}`;
+
+      await pool.query(
+        `
+        UPDATE employees
+        SET image_url = $1
+        WHERE id = $2
+        `,
+        [imageUrl, id]
+      );
+
+      res.json({
+        success: true,
+        image_url: imageUrl,
+      });
+    } catch (error) {
+      console.error("Image upload error:", error);
+      res.status(500).json({ success: false });
+    }
   }
-});
+);
 
 export default router;

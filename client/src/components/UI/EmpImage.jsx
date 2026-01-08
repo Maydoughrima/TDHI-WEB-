@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import dayjs from "dayjs";
 
-export default function EmpImage({ 
-  employeeId, 
+export default function EmpImage({
+  employeeId,
   isEditable = false,
   selectedFile,
   setSelectedFile,
-  placeholderText = "No image available"
+  placeholderText = "No image available",
 }) {
   const [employee, setEmployee] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -18,20 +18,20 @@ export default function EmpImage({
       return;
     }
 
-    async function loadEmployee() {
+    const loadEmployee = async () => {
       try {
         const res = await fetch(
           `http://localhost:5000/api/employees/${employeeId}`
         );
         const json = await res.json();
 
-        if (json.success) {
+        if (json?.success) {
           setEmployee(json.data);
         }
       } catch (err) {
         console.error("Failed to fetch employee data:", err);
       }
-    }
+    };
 
     loadEmployee();
   }, [employeeId]);
@@ -51,34 +51,33 @@ export default function EmpImage({
 
   /* ================= HANDLE FILE SELECT ================= */
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    // ✅ allow first-time selection
     setSelectedFile?.(file);
   };
 
   /* ================= DAYS EMPLOYED ================= */
   const daysEmployed = employee?.date_hired
     ? Math.floor(
-        (new Date() - new Date(employee.date_hired)) /
+        (Date.now() - new Date(employee.date_hired).getTime()) /
           (1000 * 60 * 60 * 24)
       )
     : null;
 
   return (
     <div className="flex flex-col justify-center gap-2">
-      {/* Employee Image */}
+      {/* ================= IMAGE CONTAINER ================= */}
       <div className="w-full h-96 bg-gray-100 rounded shadow-md p-4 flex items-center justify-center">
         {preview ? (
           <img
             src={preview}
+            alt="Preview"
             className="object-cover w-full h-full"
-            alt="preview"
           />
         ) : employee?.image_url ? (
           <img
-            src={employee.image_url}
+            src={`http://localhost:5000${employee.image_url}`}
             alt="Employee"
             className="object-cover w-full h-full rounded"
           />
@@ -87,7 +86,7 @@ export default function EmpImage({
         )}
       </div>
 
-      {/* UPLOAD BUTTON FOR EDIT MODE */}
+      {/* ================= UPLOAD BUTTON (EDIT MODE) ================= */}
       {isEditable && (
         <label className="cursor-pointer text-sm text-secondary text-center">
           <input
@@ -102,7 +101,7 @@ export default function EmpImage({
         </label>
       )}
 
-      {/* VIEW MODE ONLY — DATE HIRED */}
+      {/* ================= VIEW MODE — DATE HIRED ================= */}
       {!isEditable && employee && (
         <div className="text-center text-gray-600 text-sm">
           <p>

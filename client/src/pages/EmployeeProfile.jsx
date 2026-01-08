@@ -11,6 +11,7 @@ import EmploymentHistory from "../components/Composite/EmploymentHistory";
 export default function EmployeeProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   // "personal" | "education"
   const [page, setPage] = useState("personal");
@@ -18,6 +19,28 @@ export default function EmployeeProfile() {
   useEffect(() => {
     setIsEditing(false);
   }, [selectedEmployeeId]);
+
+  const handleSave = async () => {
+    try {
+      if (selectedFile && selectedEmployeeId) {
+        const formData = new FormData();
+        formData.append("image", selectedFile);
+
+        await fetch(
+          `http://localhost:5000/api/employees/${selectedEmployeeId}/image`,
+          {
+            method: "PATCH",
+            body: formData,
+          }
+        );
+      }
+
+      setSelectedFile(null);
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Failed to save image:", err);
+    }
+  };
 
   return (
     <div className="flex flex-col md:flex-row gap-2 px-2 md:px-0 overflow-hidden">
@@ -29,15 +52,12 @@ export default function EmployeeProfile() {
 
           <EmployeeProfCard
             onEdit={() => setIsEditing(true)}
-            onSave={() => {
-              console.log("SAVE TO BACKEND HERE");
-              setIsEditing(false);
-            }}
+            onSave={handleSave} // ✅ THIS IS THE FIX
             onCancel={() => setIsEditing(false)}
             isEditing={isEditing}
             onSelectEmployee={(id) => {
               setSelectedEmployeeId(id);
-              setIsEditing(false); // lock when changing employees
+              setIsEditing(false);
             }}
           />
 
@@ -53,6 +73,8 @@ export default function EmployeeProfile() {
               <PersonalInformation
                 isEditing={isEditing}
                 selectedEmployeeId={selectedEmployeeId}
+                selectedFile={selectedFile}
+                setSelectedFile={setSelectedFile}
                 goNext={() => setPage("education")}
               />
 
