@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 
 
 //import user api route 
+import employeeRoutes from "./api/employee.js";
 import userRoutes from "./api/user.js";
 import transactionRoutes from "./api/transactions.js";
 
@@ -24,6 +25,7 @@ app.get("/", (req,res) =>{
 //mount api routes under /api user
 app.use("/api", userRoutes);
 app.use("/api", transactionRoutes);
+app.use("/api", employeeRoutes);    
 
 //start server
 app.listen(PORT, () => {

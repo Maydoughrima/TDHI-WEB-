@@ -4,11 +4,6 @@ import { RiUserAddLine } from "react-icons/ri";
 import AddEmployeeModal from "../UI/AddEmployeeModal";
 import Button from "../UI/Button";
 
-import {
-  departments,
-  employeesByDepartment,
-} from "../../data/employeeprofile";
-
 export default function EmployeeProfCard({
   onEdit,
   onSave,
@@ -16,28 +11,61 @@ export default function EmployeeProfCard({
   isEditing,
   onSelectEmployee,
 }) {
+  const [departments, setDepartments] = useState([]);
   const [employees, setEmployees] = useState([]);
+
   const [selectedDept, setSelectedDept] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Load employees when department changes
+  //fetch departments (on load)
   useEffect(() => {
-    if (!selectedDept) return;
-    setEmployees(employeesByDepartment[selectedDept] || []);
+    async function loadDepartments() {
+      try {
+        const res = await fetch("http://localhost:5000/api/departments");
+        const json = await res.json();
+        setDepartments(json.data || []);
+      } catch (err) {
+        console.error("Failed to fetch departments:", err);
+      }
+    }
+    loadDepartments();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedDept) {
+      setEmployees([]);
+      return;
+    }
+
+    async function loadEmployees() {
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/employees?department=${selectedDept}`
+        );
+        const json = await res.json();
+        setEmployees(json.data || []);
+      } catch (err) {
+        console.error("Failed to load employees", err);
+      }
+    }
+
+    loadEmployees();
   }, [selectedDept]);
 
-  // When employee changes → lock editing again
+  /**
+   * ===============================
+   * RESET EDIT MODE ON CHANGE
+   * ===============================
+   */
   useEffect(() => {
-    if (isEditing) onCancel(); // Reset editing state
+    if (isEditing) onCancel();
   }, [selectedEmployee, selectedDept]);
 
   return (
     <div className="cta-card flex flex-col md:flex-row justify-between bg-bg p-4 rounded-md shadow-md gap-4">
-
-      {/* DROPDOWNS */}
+      {/* ================= DROPDOWNS ================= */}
       <div className="flex flex-col sm:flex-row gap-2 md:gap-4 w-full md:w-auto">
-
         {/* Department Dropdown */}
         <select
           className="border rounded-lg p-2 bg-white text-sm"
@@ -49,37 +77,34 @@ export default function EmployeeProfCard({
         >
           <option value="">Select Department</option>
           {departments.map((dept) => (
-            <option key={dept.id} value={dept.id}>
-              {dept.name}
+            <option key={dept} value={dept}>
+              {dept}
             </option>
           ))}
         </select>
 
-        {/* Employees dropdown */}
+        {/* Employee Dropdown */}
         <select
           className="border rounded-lg p-2 bg-white text-sm"
           value={selectedEmployee}
           onChange={(e) => {
             const id = e.target.value;
             setSelectedEmployee(id);
-            onSelectEmployee(id); // Sends ID only
+            onSelectEmployee(id); // 🔥 ID sent to profile fetch
           }}
           disabled={!selectedDept}
         >
           <option value="">Select Employee</option>
           {employees.map((emp) => (
             <option key={emp.id} value={emp.id}>
-              {emp.name}
+              {emp.full_name}
             </option>
           ))}
         </select>
-
       </div>
 
-      {/* BUTTONS */}
+      {/* ================= BUTTONS ================= */}
       <div className="flex flex-col sm:flex-row gap-2 md:gap-2">
-
-        {/* ============ VIEW MODE ============ */}
         {!isEditing && (
           <>
             <Button
@@ -98,7 +123,6 @@ export default function EmployeeProfCard({
           </>
         )}
 
-        {/* ============ EDIT MODE ============ */}
         {isEditing && (
           <>
             <Button

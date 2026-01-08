@@ -5,7 +5,7 @@ import EmpImage from "../UI/EmpImage";
 import Button from "../UI/Button";
 import { IoIosArrowForward } from "react-icons/io";
 
-import { getEmployeeById } from "../../data/employeeprofile";
+import { fetchEmployeeById } from "../../../../server/api/employeeAPI";
 
 export default function PersonalInformation({
   isEditing,
@@ -29,51 +29,64 @@ export default function PersonalInformation({
     contactNo: "",
   });
 
-  // Load employee data
+  // ✅ IMAGE STATE (new, minimal)
+  const [imageUrl, setImageUrl] = useState(null);
+  
+  //img preview
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  // ✅ FETCH FROM BACKEND WHEN EMPLOYEE CHANGES
   useEffect(() => {
     if (!selectedEmployeeId) return;
 
-    const emp = getEmployeeById(selectedEmployeeId);
-    if (!emp) return;
+    async function loadEmployee() {
+      try {
+        const emp = await fetchEmployeeById(selectedEmployeeId);
 
-    setForm({
-      employeeNo: emp.employeeNo ?? "",
-      fullName: emp.name ?? "",
-      address: emp.address ?? "",
-      placeOfBirth: emp.placeOfBirth ?? "",
-      dateOfBirth: emp.dateOfBirth ?? "",
-      dateHired: emp.dateHired ?? "",
-      department: emp.department ?? "",
-      position: emp.position ?? "",
-      emailAddress: emp.emailAddress ?? "",
-      nameOfSpouse: emp.nameOfSpouse ?? "",
-      civilStatus: emp.civilStatus ?? "",
-      citizenship: emp.citizenship ?? "",
-      spouseAddress: emp.spouseAddress ?? "",
-      contactNo: emp.contactNo ?? "",
-    });
+        setForm({
+          employeeNo: emp.employee_no ?? "",
+          fullName: emp.full_name ?? "",
+          address: emp.address ?? "",
+          placeOfBirth: emp.place_of_birth ?? "",
+          dateOfBirth: emp.date_of_birth ?? "",
+          dateHired: emp.date_hired ?? "",
+          department: emp.department ?? "",
+          position: emp.position ?? "",
+          emailAddress: emp.email ?? "",
+          nameOfSpouse: emp.name_of_spouse ?? "",
+          civilStatus: emp.civil_status ?? "",
+          citizenship: emp.citizenship ?? "",
+          spouseAddress: emp.spouse_address ?? "",
+          contactNo: emp.contact_no ?? "",
+        });
+
+        // ✅ IMAGE (optional)
+        setImageUrl(emp.image_url || null);
+      } catch (err) {
+        console.error("Failed to load employee:", err);
+      }
+    }
+
+    loadEmployee();
   }, [selectedEmployeeId]);
 
   function handleChange(field, value) {
-    if (!isEditing) return; // prevents edit when locked
+    if (!isEditing) return;
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
   return (
     <div className="bg-bg w-full rounded-md p-4">
       <div className="bg-secondary py-2 rounded">
-        <h2 className="text-bg text-center font-heading">Personal Information</h2>
+        <h2 className="text-bg text-center font-heading">
+          Personal Information
+        </h2>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
-        
         {/* LEFT */}
         <div className="flex flex-col gap-4">
-          <TextField
-            label="Employee No."
-            value={form.employeeNo}
-            disabled
-          />
+          <TextField label="Employee No." value={form.employeeNo} disabled />
 
           <TextField
             label="Full Name"
@@ -98,6 +111,7 @@ export default function PersonalInformation({
 
           <TextField
             label="Date of Birth"
+            type="date"
             value={form.dateOfBirth}
             disabled={!isEditing}
             onChange={(e) => handleChange("dateOfBirth", e.target.value)}
@@ -132,12 +146,7 @@ export default function PersonalInformation({
             onChange={(e) => handleChange("dateHired", e.target.value)}
           />
 
-          <TextField
-            label="Department"
-            value={form.department}
-            disabled={!isEditing}
-            onChange={(e) => handleChange("department", e.target.value)}
-          />
+          <TextField label="Department" value={form.department} disabled />
 
           <TextField
             label="Position"
@@ -174,7 +183,6 @@ export default function PersonalInformation({
             onChange={(e) => handleChange("spouseAddress", e.target.value)}
           />
 
-          {/* NEXT BUTTON */}
           <div className="flex justify-end">
             <Button className="bg-gray-100 border shadow-sm" onClick={goNext}>
               <IoIosArrowForward className="text-primary" />
@@ -182,8 +190,14 @@ export default function PersonalInformation({
           </div>
         </div>
 
-        {/* IMAGE */}
-        <EmpImage employeeId={selectedEmployeeId} />
+        {/* IMAGE — UI UNCHANGED */}
+        <EmpImage
+          employeeId={selectedEmployeeId}
+          imageUrl={imageUrl}
+          isEditable={isEditing}
+          selectedFile={selectedFile}
+          setSelectedFile={setSelectedFile}
+        />
       </div>
     </div>
   );

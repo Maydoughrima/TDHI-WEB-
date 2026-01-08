@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import dayjs from "dayjs"; // optional, for easier date formatting
+import dayjs from "dayjs";
 
 export default function EmpImage({ 
   employeeId, 
@@ -8,39 +8,62 @@ export default function EmpImage({
   setSelectedFile,
   placeholderText = "No image available"
 }) {
-
   const [employee, setEmployee] = useState(null);
   const [preview, setPreview] = useState(null);
 
+  /* ================= FETCH EMPLOYEE (IMAGE + DATE HIRED) ================= */
   useEffect(() => {
-    if (!employeeId) return;
-    // TEMP: Fetch employee info from backend (commented for now)
-    /*
-    fetch(`/api/employees/${employeeId}`)
-      .then((res) => res.json())
-      .then((data) => setEmployee(data))
-      .catch((err) => console.error("Failed to fetch employee data:", err));
-    */
+    if (!employeeId) {
+      setEmployee(null);
+      return;
+    }
+
+    async function loadEmployee() {
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/employees/${employeeId}`
+        );
+        const json = await res.json();
+
+        if (json.success) {
+          setEmployee(json.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch employee data:", err);
+      }
+    }
+
+    loadEmployee();
   }, [employeeId]);
 
-  //preview selected image (modal only)
-  useEffect (() => {
-    if (!selectedFile) return;
-    const objectUrl = URL.createObjectUrl(selectedFile);
+  /* ================= PREVIEW SELECTED IMAGE ================= */
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreview(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedFile);
     setPreview(objectUrl);
+
     return () => URL.revokeObjectURL(objectUrl);
   }, [selectedFile]);
 
+  /* ================= HANDLE FILE SELECT ================= */
   const handleFileChange = (e) => {
-    const file =e.target.files[0];
-    if (file && selectedFile){
-      setSelectedFile(file);
-    }
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // ✅ allow first-time selection
+    setSelectedFile?.(file);
   };
 
-  // Compute days employed
+  /* ================= DAYS EMPLOYED ================= */
   const daysEmployed = employee?.date_hired
-    ? Math.floor((new Date() - new Date(employee.date_hired)) / (1000 * 60 * 60 * 24))
+    ? Math.floor(
+        (new Date() - new Date(employee.date_hired)) /
+          (1000 * 60 * 60 * 24)
+      )
     : null;
 
   return (
@@ -48,12 +71,14 @@ export default function EmpImage({
       {/* Employee Image */}
       <div className="w-full h-96 bg-gray-100 rounded shadow-md p-4 flex items-center justify-center">
         {preview ? (
-          <img src={preview}
-          className="object-cover w-full h-full"
-          alt="preview" />
-        ) : employee?.photo_url ? (
           <img
-            src={employee.photo_url}
+            src={preview}
+            className="object-cover w-full h-full"
+            alt="preview"
+          />
+        ) : employee?.image_url ? (
+          <img
+            src={employee.image_url}
             alt="Employee"
             className="object-cover w-full h-full rounded"
           />
@@ -62,24 +87,23 @@ export default function EmpImage({
         )}
       </div>
 
-      {/* UPLOAD BUTTON FOR MODAL */}
-       {isEditable &&(
+      {/* UPLOAD BUTTON FOR EDIT MODE */}
+      {isEditable && (
         <label className="cursor-pointer text-sm text-secondary text-center">
-          <input type="file" 
-          accept="image/*"
-          onChange={handleFileChange}
-          className="hidden"
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
           />
           <span className="inline-block px-3 py-1 border rounded hover:bg-gray-100">
             Upload Image
           </span>
         </label>
-       )} 
+      )}
 
-
-
-      {/* VIEW MODE ONLYE ??? Date Hired & Days Employed */}
-       {!isEditable && employee && (
+      {/* VIEW MODE ONLY — DATE HIRED */}
+      {!isEditable && employee && (
         <div className="text-center text-gray-600 text-sm">
           <p>
             Date Hired:{" "}
@@ -87,7 +111,9 @@ export default function EmpImage({
               ? dayjs(employee.date_hired).format("MMM D, YYYY")
               : "N/A"}
           </p>
-          {daysEmployed !== null && <p>({daysEmployed} days employed)</p>}
+          {daysEmployed !== null && (
+            <p>({daysEmployed} days employed)</p>
+          )}
         </div>
       )}
     </div>
