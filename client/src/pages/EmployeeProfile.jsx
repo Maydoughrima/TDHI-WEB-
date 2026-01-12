@@ -9,36 +9,109 @@ import EmpPayrollInfo from "../components/Composite/EmpPayrollInfo";
 import EmploymentHistory from "../components/Composite/EmploymentHistory";
 
 export default function EmployeeProfile() {
+  /* ================= STATE ================= */
   const [isEditing, setIsEditing] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
 
-  // "personal" | "education"
+  const [selectedFile, setSelectedFile] = useState(null); // image only
+  const [payrollDraft, setPayrollDraft] = useState(null); // payroll draft
+  const [personalDraft, setPersonalDraft] = useState(null); // personal draft
+
+  // "personal" | "education" | "employment"
   const [page, setPage] = useState("personal");
 
+  /* ================= RESET ON EMPLOYEE CHANGE ================= */
   useEffect(() => {
     setIsEditing(false);
+    setSelectedFile(null);
+    setPayrollDraft(null);
+    setPersonalDraft(null);
   }, [selectedEmployeeId]);
 
+  /* ================= SAVE HANDLER ================= */
   const handleSave = async () => {
+    if (!selectedEmployeeId) return;
+
     try {
-      if (selectedFile && selectedEmployeeId) {
+      console.log("SAVE CLICKED");
+      console.log("personalDraft:", personalDraft);
+      console.log("payrollDraft:", payrollDraft);
+
+      /* ============ 1) IMAGE SAVE ============ */
+      if (selectedFile) {
         const formData = new FormData();
         formData.append("image", selectedFile);
 
-        await fetch(
+        const res = await fetch(
           `http://localhost:5000/api/employees/${selectedEmployeeId}/image`,
-          {
-            method: "PATCH",
-            body: formData,
-          }
+          { method: "PATCH", body: formData }
         );
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error("Image save failed: " + txt);
+        }
       }
 
-      setSelectedFile(null);
+      /* ============ 2) PERSONAL INFO SAVE ============ */
+      // personalDraft MUST be DB-shaped keys (snake_case)
+      if (personalDraft) {
+        const res = await fetch(
+          `http://localhost:5000/api/employees/${selectedEmployeeId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(personalDraft),
+          }
+        );
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error("Personal save failed: " + txt);
+        }
+      }
+
+      /* ============ 3) PAYROLL SAVE ============ */
+      /* ============ 3) PAYROLL SAVE ============ */
+      if (payrollDraft) {
+        const payload = {
+          employeeStatus: payrollDraft.employeeStatus ?? null,
+          designation: payrollDraft.designation ?? null,
+          basicRate: payrollDraft.basicRate ?? null,
+          dailyRate: payrollDraft.dailyRate ?? null,
+          hourlyRate: payrollDraft.hourlyRate ?? null,
+          leaveCredits: payrollDraft.leaveCredits ?? null,
+          sssNo: payrollDraft.sssNo ?? null,
+          hdmfNo: payrollDraft.hdmfNo ?? null,
+          tinNo: payrollDraft.tinNo ?? null,
+        };
+
+        const res = await fetch(
+          `http://localhost:5000/api/employees/${selectedEmployeeId}/payroll`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error("Payroll save failed: " + txt);
+        }
+      }
+
+      /* ============ CLEANUP ============ */
       setIsEditing(false);
+      setSelectedFile(null);
+
+      // optional: keep drafts or clear them
+      // setPayrollDraft(null);
+      // setPersonalDraft(null);
+
+      console.log("SAVE DONE ✅");
     } catch (err) {
-      console.error("Failed to save image:", err);
+      console.error(err);
     }
   };
 
@@ -51,20 +124,14 @@ export default function EmployeeProfile() {
           <TopCard title="EMPLOYEE PROFILE" />
 
           <EmployeeProfCard
-            onEdit={() => setIsEditing(true)}
-            onSave={handleSave} // ✅ THIS IS THE FIX
-            onCancel={() => setIsEditing(false)}
             isEditing={isEditing}
-            onSelectEmployee={(id) => {
-              setSelectedEmployeeId(id);
-              setIsEditing(false);
-            }}
+            onEdit={() => setIsEditing(true)}
+            onSave={handleSave}
+            onCancel={() => setIsEditing(false)}
+            onSelectEmployee={(id) => setSelectedEmployeeId(id)}
           />
 
-          {/* =========================== */}
-          {/* PAGE 1 — PERSONAL INFO PAGE */}
-          {/* =========================== */}
-
+          {/* ================= PAGE: PERSONAL ================= */}
           {page === "personal" && (
             <div
               className="animate-fadeSlideIn"
@@ -75,23 +142,21 @@ export default function EmployeeProfile() {
                 selectedEmployeeId={selectedEmployeeId}
                 selectedFile={selectedFile}
                 setSelectedFile={setSelectedFile}
+                setPersonalDraft={setPersonalDraft} // ✅ rename + pass
                 goNext={() => setPage("education")}
               />
 
-              {/* ➜ Added top margin between Personal Info + Payroll */}
               <div className="mt-6">
                 <EmpPayrollInfo
                   selectedEmployeeId={selectedEmployeeId}
                   isEditing={isEditing}
+                  onChangePayroll={setPayrollDraft}
                 />
               </div>
             </div>
           )}
 
-          {/* =============================== */}
-          {/* PAGE 2 — EDUCATIONAL SUMMARY    */}
-          {/* =============================== */}
-
+          {/* ================= PAGE: EDUCATION ================= */}
           {page === "education" && (
             <div
               className="animate-fadeSlideIn"
@@ -106,10 +171,7 @@ export default function EmployeeProfile() {
             </div>
           )}
 
-          {/* =============================== */}
-          {/* PAGE 3 — EMPLOYMENT SUMMARY    */}
-          {/* =============================== */}
-
+          {/* ================= PAGE: EMPLOYMENT ================= */}
           {page === "employment" && (
             <div
               className="animate-fadeSlideIn"

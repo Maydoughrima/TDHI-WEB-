@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { FaRegEdit } from "react-icons/fa";
 import { RiUserAddLine } from "react-icons/ri";
 import AddEmployeeModal from "../UI/AddEmployeeModal";
@@ -18,7 +18,11 @@ export default function EmployeeProfCard({
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  //fetch departments (on load)
+  // 🔒 Track previous selection to avoid killing Save
+  const prevEmployeeRef = useRef(null);
+  const prevDeptRef = useRef(null);
+
+  /* ================= FETCH DEPARTMENTS ================= */
   useEffect(() => {
     async function loadDepartments() {
       try {
@@ -32,6 +36,7 @@ export default function EmployeeProfCard({
     loadDepartments();
   }, []);
 
+  /* ================= FETCH EMPLOYEES ================= */
   useEffect(() => {
     if (!selectedDept) {
       setEmployees([]);
@@ -53,14 +58,22 @@ export default function EmployeeProfCard({
     loadEmployees();
   }, [selectedDept]);
 
-  /**
-   * ===============================
-   * RESET EDIT MODE ON CHANGE
-   * ===============================
-   */
+  /* ================= CANCEL EDIT ONLY ON ACTUAL CHANGE ================= */
   useEffect(() => {
-    if (isEditing) onCancel();
-  }, [selectedEmployee, selectedDept]);
+    const employeeChanged =
+      prevEmployeeRef.current &&
+      prevEmployeeRef.current !== selectedEmployee;
+
+    const deptChanged =
+      prevDeptRef.current && prevDeptRef.current !== selectedDept;
+
+    if (isEditing && (employeeChanged || deptChanged)) {
+      onCancel();
+    }
+
+    prevEmployeeRef.current = selectedEmployee;
+    prevDeptRef.current = selectedDept;
+  }, [selectedEmployee, selectedDept, isEditing, onCancel]);
 
   return (
     <div className="cta-card flex flex-col md:flex-row justify-between bg-bg p-4 rounded-md shadow-md gap-4">
@@ -90,7 +103,7 @@ export default function EmployeeProfCard({
           onChange={(e) => {
             const id = e.target.value;
             setSelectedEmployee(id);
-            onSelectEmployee(id); // 🔥 ID sent to profile fetch
+            onSelectEmployee(id);
           }}
           disabled={!selectedDept}
         >

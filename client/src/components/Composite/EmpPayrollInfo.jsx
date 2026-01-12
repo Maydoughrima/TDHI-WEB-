@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import TextField from "../UI/Textfield";
-import EmpDeductions from "../UI/empDeductions";
 import Dropdown from "../UI/Dropdown";
+import EmpDeductions from "../UI/empDeductions";
 
-// ✅ USE REAL API (not mock)
-import { fetchEmployeeById } from "../../../../server/api/employeeAPI";
+import { fetchPayrollByEmployeeId } from "../../../../server/api/employeeAPI";
 
-export default function EmpPayrollInfo({ isEditing, selectedEmployeeId }) {
+export default function EmpPayrollInfo({
+  isEditing,
+  selectedEmployeeId,
+  onChangePayroll,
+}) {
   const [form, setForm] = useState({
     employeeStatus: "",
     designation: "",
@@ -19,38 +22,53 @@ export default function EmpPayrollInfo({ isEditing, selectedEmployeeId }) {
     tinNo: "",
   });
 
-  /* ================= LOAD PAYROLL INFO ================= */
+  /* ================= LOAD PAYROLL (🔥 FIX) ================= */
   useEffect(() => {
     if (!selectedEmployeeId) return;
 
     async function loadPayroll() {
-      try {
-        const emp = await fetchEmployeeById(selectedEmployeeId);
+      const payroll = await fetchPayrollByEmployeeId(selectedEmployeeId);
 
-        if (!emp) return;
-
+      if (!payroll) {
         setForm({
-          employeeStatus: emp.employment_status || "",
-          designation: emp.designation || "",
-          basicRate: emp.basic_rate || "",
-          dailyRate: emp.daily_rate || "",
-          hourlyRate: emp.hourly_rate || "",
-          leaveCredits: emp.leave_credits || "",
-          sssNo: emp.sss_no || "",
-          hdmfNo: emp.pagibig_no || "",
-          tinNo: emp.tin_no || "",
+          employeeStatus: "",
+          designation: "",
+          basicRate: "",
+          dailyRate: "",
+          hourlyRate: "",
+          leaveCredits: "",
+          sssNo: "",
+          hdmfNo: "",
+          tinNo: "",
         });
-      } catch (err) {
-        console.error("Failed to load payroll info:", err);
+        return;
       }
+
+      setForm({
+        employeeStatus: payroll.employment_status ?? "",
+        designation: payroll.designation ?? "",
+        basicRate: payroll.basic_rate ?? "",
+        dailyRate: payroll.daily_rate ?? "",
+        hourlyRate: payroll.hourly_rate ?? "",
+        leaveCredits: payroll.leave_credits ?? "",
+        sssNo: payroll.sss_no ?? "",
+        hdmfNo: payroll.hdmf_no ?? "",
+        tinNo: payroll.tin_no ?? "",
+      });
     }
 
     loadPayroll();
   }, [selectedEmployeeId]);
 
+  /* ================= HANDLE CHANGE ================= */
   function handleChange(field, value) {
     if (!isEditing) return;
-    setForm((prev) => ({ ...prev, [field]: value }));
+
+    const updated = { ...form, [field]: value };
+    setForm(updated);
+
+    // 🔥 push ONLY user edits to parent
+    onChangePayroll?.(updated);
   }
 
   return (
@@ -83,28 +101,36 @@ export default function EmpPayrollInfo({ isEditing, selectedEmployeeId }) {
             label="Designation"
             value={form.designation}
             disabled={!isEditing}
-            onChange={(e) => handleChange("designation", e.target.value)}
+            onChange={(e) =>
+              handleChange("designation", e.target.value)
+            }
           />
 
           <TextField
             label="Basic Rate"
             value={form.basicRate}
             disabled={!isEditing}
-            onChange={(e) => handleChange("basicRate", e.target.value)}
+            onChange={(e) =>
+              handleChange("basicRate", e.target.value)
+            }
           />
 
           <TextField
             label="Daily Rate"
             value={form.dailyRate}
             disabled={!isEditing}
-            onChange={(e) => handleChange("dailyRate", e.target.value)}
+            onChange={(e) =>
+              handleChange("dailyRate", e.target.value)
+            }
           />
 
           <TextField
             label="Hourly Rate"
             value={form.hourlyRate}
             disabled={!isEditing}
-            onChange={(e) => handleChange("hourlyRate", e.target.value)}
+            onChange={(e) =>
+              handleChange("hourlyRate", e.target.value)
+            }
           />
         </div>
 
@@ -123,25 +149,30 @@ export default function EmpPayrollInfo({ isEditing, selectedEmployeeId }) {
             label="SSS No."
             value={form.sssNo}
             disabled={!isEditing}
-            onChange={(e) => handleChange("sssNo", e.target.value)}
+            onChange={(e) =>
+              handleChange("sssNo", e.target.value)
+            }
           />
 
           <TextField
             label="HDMF No."
             value={form.hdmfNo}
             disabled={!isEditing}
-            onChange={(e) => handleChange("hdmfNo", e.target.value)}
+            onChange={(e) =>
+              handleChange("hdmfNo", e.target.value)
+            }
           />
 
           <TextField
             label="TIN No."
             value={form.tinNo}
             disabled={!isEditing}
-            onChange={(e) => handleChange("tinNo", e.target.value)}
+            onChange={(e) =>
+              handleChange("tinNo", e.target.value)
+            }
           />
         </div>
 
-        {/* DEDUCTIONS */}
         <EmpDeductions employeeId={selectedEmployeeId} />
       </div>
     </div>
