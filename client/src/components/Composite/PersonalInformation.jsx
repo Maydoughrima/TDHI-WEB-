@@ -7,6 +7,12 @@ import { IoIosArrowForward } from "react-icons/io";
 
 import { fetchEmployeeById } from "../../../../server/api/employeeAPI";
 
+/* ================= HELPERS ================= */
+const formatDateForInput = (date) => {
+  if (!date) return "";
+  return new Date(date).toISOString().split("T")[0];
+};
+
 export default function PersonalInformation({
   isEditing,
   selectedEmployeeId,
@@ -51,8 +57,10 @@ export default function PersonalInformation({
           fullName: emp.full_name ?? "",
           address: emp.address ?? "",
           placeOfBirth: emp.place_of_birth ?? "",
-          dateOfBirth: emp.date_of_birth ?? "",
-          dateHired: emp.date_hired ?? "",
+
+          dateOfBirth: formatDateForInput(emp.date_of_birth),
+          dateHired: formatDateForInput(emp.date_hired),
+
           department: emp.department ?? "",
           position: emp.position ?? "",
           emailAddress: emp.email ?? "",
@@ -90,14 +98,8 @@ export default function PersonalInformation({
       full_name: form.fullName || null,
       address: form.address || null,
       place_of_birth: form.placeOfBirth || null,
-      date_of_birth:
-        form.dateOfBirth && form.dateOfBirth !== "mm/dd/yyyy"
-          ? form.dateOfBirth
-          : null,
-      date_hired:
-        form.dateHired && form.dateHired !== "mm/dd/yyyy"
-          ? form.dateHired
-          : null,
+      date_of_birth: form.dateOfBirth || null,
+      date_hired: form.dateHired || null,
       civil_status: form.civilStatus || null,
       citizenship: form.citizenship || null,
       spouse_name: form.nameOfSpouse || null,

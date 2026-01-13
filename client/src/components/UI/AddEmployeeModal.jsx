@@ -8,7 +8,7 @@ import PersonalDetailsModal from "../Composite/PersonalDetailsModal";
 import PayrollInfoModal from "../Composite/PayrollInfoModal";
 import UploadImageModal from "../Composite/UploadImageModal";
 
-export default function AddEmployeeModal({ isOpen, onClose }) {
+export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
   const [step, setStep] = useState(1);
 
   const [form, setForm] = useState({
@@ -57,11 +57,28 @@ export default function AddEmployeeModal({ isOpen, onClose }) {
     setLoading(true);
 
     try {
-      console.log("SUBMIT DATA:", { ...form, employeeImage });
-      setLoading(false);
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+
+      const formData = new FormData();
+      Object.entries(form).forEach(([k, v]) => formData.append(k, v));
+      if (employeeImage) formData.append("image", employeeImage);
+
+      const res = await fetch("http://localhost:5000/api/employees", {
+        method: "POST",
+        headers: {
+          "x-user-id": storedUser?.id,
+        },
+        body: formData,
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error("Failed to add employee");
+
+      onEmployeeAdded(json.data); // 🔥 notify parent
       resetAndClose();
     } catch (err) {
       setError(err.message);
+    } finally {
       setLoading(false);
     }
   };

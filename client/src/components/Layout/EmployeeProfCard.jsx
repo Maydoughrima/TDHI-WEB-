@@ -28,7 +28,7 @@ export default function EmployeeProfCard({
       try {
         const res = await fetch("http://localhost:5000/api/employees/departments");
         const json = await res.json();
-
+        
         console.log("DEPARTMENTS RESPONSE", json);
 
         setDepartments(json.data || []);
@@ -161,6 +161,12 @@ export default function EmployeeProfCard({
       <AddEmployeeModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        onEmployeeAdded = {(emp) =>{
+          setIsModalOpen(false);
+          setSelectedDept(emp.department);
+          setSelectedEmployee(emp.id);
+          onSelectEmployee(emp.id);
+        }}
       />
     </div>
   );

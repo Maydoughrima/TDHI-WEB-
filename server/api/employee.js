@@ -52,7 +52,7 @@ router.get("/departments", async (_, res) => {
       ORDER BY department ASC
     `);
 
-    res.json({ success: true, data: rows.map(r => r.department) });
+    res.json({ success: true, data: rows.map((r) => r.department) });
   } catch (err) {
     console.error("Departments error:", err);
     res.status(500).json({ success: false });
@@ -115,6 +115,222 @@ router.get("/:id", async (req, res) => {
   } catch (err) {
     console.error("Fetch employee error:", err);
     res.status(500).json({ success: false });
+  }
+});
+
+/* ======================================================
+   PATCH /api/employees/:id/image
+   UPDATE EMPLOYEE PROFILE IMAGE + AUDIT
+====================================================== */
+router.patch("/:id/image", upload.single("image"), async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const employeeId = req.params.id;
+    const actorId = req.headers["x-user-id"] || null;
+    const actorRole = "PAYROLL_CHECKER";
+
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No image uploaded" });
+    }
+
+    // get old image (for audit / cleanup later)
+    const { rows } = await client.query(
+      `SELECT image_url FROM employees WHERE id = $1`,
+      [employeeId]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ success: false });
+    }
+
+    const oldImage = rows[0].image_url;
+    const newImage = `/uploads/employeeImages/${req.file.filename}`;
+
+    await client.query(
+      `
+      UPDATE employees
+      SET image_url = $1
+      WHERE id = $2
+      `,
+      [newImage, employeeId]
+    );
+
+    await transactionLog({
+      actorId,
+      actorRole,
+      action: "EDIT",
+      entity: "EMPLOYEE_PROFILE",
+      entityId: employeeId,
+      status: "COMPLETED",
+      description: `Profile image updated`,
+    });
+
+    res.json({ success: true, image_url: newImage });
+  } catch (err) {
+    console.error("Update image error:", err);
+    res.status(500).json({ success: false });
+  } finally {
+    client.release();
+  }
+});
+
+/* ======================================================
+   POST /api/employees
+   ADD EMPLOYEE + PAYROLL + AUDIT
+====================================================== */
+router.post("/", upload.single("image"), async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const actorId = req.headers["x-user-id"] || null;
+    const actorRole = "PAYROLL_CHECKER";
+
+    const {
+      employeeNo,
+      fullName,
+      address,
+      placeOfBirth,
+      dateOfBirth,
+      dateHired,
+      department,
+      position,
+      emailAddress,
+      contactNo,
+      civilStatus,
+      citizenship,
+      nameOfSpouse,
+      spouseAddress,
+
+      employeeStatus,
+      designation,
+      basicRate,
+      dailyRate,
+      hourlyRate,
+      leaveCredits,
+      sssNo,
+      hdmfNo,
+      tinNo,
+    } = req.body;
+
+    await client.query("BEGIN");
+
+    /* ================= INSERT EMPLOYEE ================= */
+    const empResult = await client.query(
+      `
+      INSERT INTO employees (
+        employee_no,
+        full_name,
+        address,
+        place_of_birth,
+        date_of_birth,
+        date_hired,
+        department,
+        position,
+        email,
+        contact_no,
+        civil_status,
+        citizenship,
+        spouse_name,
+        spouse_address,
+        image_url
+      )
+      VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15
+      )
+      RETURNING id
+      `,
+      [
+        employeeNo,
+        fullName,
+        address,
+        placeOfBirth,
+        dateOfBirth,
+        dateHired,
+        department,
+        position,
+        emailAddress,
+        contactNo,
+        civilStatus,
+        citizenship,
+        nameOfSpouse,
+        spouseAddress,
+        req.file ? `/uploads/employeeImages/${req.file.filename}` : null,
+      ]
+    );
+
+    const employeeId = empResult.rows[0].id;
+
+    /* ================= INSERT PAYROLL ================= */
+    await client.query(
+      `
+      INSERT INTO employee_payroll (
+        employee_id,
+        employment_status,
+        designation,
+        basic_rate,
+        daily_rate,
+        hourly_rate,
+        leave_credits,
+        sss_no,
+        hdmf_no,
+        tin_no
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      `,
+      [
+        employeeId,
+        employeeStatus,
+        designation,
+        numOrNull(basicRate),
+        numOrNull(dailyRate),
+        numOrNull(hourlyRate),
+        intOrNull(leaveCredits),
+        sssNo,
+        hdmfNo,
+        tinNo,
+      ]
+    );
+
+    /* ================= AUDIT LOGS ================= */
+    await transactionLog({
+      actorId,
+      actorRole,
+      action: "ADD",
+      entity: "EMPLOYEE_PROFILE",
+      entityId: employeeId,
+      status: "COMPLETED",
+      description: `Added employee profile: ${fullName}`,
+    });
+
+    await transactionLog({
+      actorId,
+      actorRole,
+      action: "ADD",
+      entity: "EMPLOYEE_PAYROLL_INFO",
+      entityId: employeeId,
+      status: "COMPLETED",
+      description: `Added employee payroll info`,
+    });
+
+    await client.query("COMMIT");
+
+    res.json({
+      success: true,
+      data: {
+        id: employeeId,
+        department,
+        full_name: fullName,
+      },
+    });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Add employee error:", err);
+    res.status(500).json({ success: false });
+  } finally {
+    client.release();
   }
 });
 
@@ -196,7 +412,9 @@ router.patch("/:id", async (req, res) => {
           entity: "EMPLOYEE_PROFILE", // ✅ MATCHES ENUM
           entityId: employeeId,
           status: "COMPLETED",
-          description: `${key} changed from "${old[key] ?? "NULL"}" to "${fields[key]}"`
+          description: `${key} changed from "${old[key] ?? "NULL"}" to "${
+            fields[key]
+          }"`,
         });
       }
     }
@@ -313,7 +531,9 @@ router.post("/:id/payroll", async (req, res) => {
           entity: "EMPLOYEE_PAYROLL_INFO", // ✅ MATCHES ENUM
           entityId: employeeId,
           status: "COMPLETED",
-          description: `${k} changed from "${old[k] ?? "NULL"}" to "${p[k] ?? "NULL"}"`
+          description: `${k} changed from "${old[k] ?? "NULL"}" to "${
+            p[k] ?? "NULL"
+          }"`,
         });
       }
     }
