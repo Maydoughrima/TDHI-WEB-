@@ -8,16 +8,18 @@ import EducationalSummary from "../components/Composite/EducationalSummary";
 import EmpPayrollInfo from "../components/Composite/EmpPayrollInfo";
 import EmploymentHistory from "../components/Composite/EmploymentHistory";
 
+/* ================= AUTH CONTEXT (SAFE) ================= */
+const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+
 export default function EmployeeProfile() {
   /* ================= STATE ================= */
   const [isEditing, setIsEditing] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
-  const [selectedFile, setSelectedFile] = useState(null); // image only
-  const [payrollDraft, setPayrollDraft] = useState(null); // payroll draft
-  const [personalDraft, setPersonalDraft] = useState(null); // personal draft
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [payrollDraft, setPayrollDraft] = useState(null);
+  const [personalDraft, setPersonalDraft] = useState(null);
 
-  // "personal" | "education" | "employment"
   const [page, setPage] = useState("personal");
 
   /* ================= RESET ON EMPLOYEE CHANGE ================= */
@@ -30,12 +32,22 @@ export default function EmployeeProfile() {
 
   /* ================= SAVE HANDLER ================= */
   const handleSave = async () => {
+    // 🔒 HARD GUARDS (PREVENT CRASHES)
+    if (!isEditing) return;
     if (!selectedEmployeeId) return;
+    if (!storedUser?.id) {
+      console.error("No logged-in user found");
+      return;
+    }
 
     try {
       console.log("SAVE CLICKED");
       console.log("personalDraft:", personalDraft);
       console.log("payrollDraft:", payrollDraft);
+
+      const authHeaders = {
+        "x-user-id": storedUser.id,
+      };
 
       /* ============ 1) IMAGE SAVE ============ */
       if (selectedFile) {
@@ -44,74 +56,65 @@ export default function EmployeeProfile() {
 
         const res = await fetch(
           `http://localhost:5000/api/employees/${selectedEmployeeId}/image`,
-          { method: "PATCH", body: formData }
+          {
+            method: "PATCH",
+            headers: authHeaders,
+            body: formData,
+          }
         );
 
         if (!res.ok) {
-          const txt = await res.text();
-          throw new Error("Image save failed: " + txt);
+          throw new Error(await res.text());
         }
       }
 
       /* ============ 2) PERSONAL INFO SAVE ============ */
-      // personalDraft MUST be DB-shaped keys (snake_case)
-      if (personalDraft) {
+      if (personalDraft && Object.keys(personalDraft).length > 0) {
         const res = await fetch(
           `http://localhost:5000/api/employees/${selectedEmployeeId}`,
           {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              ...authHeaders,
+            },
             body: JSON.stringify(personalDraft),
           }
         );
 
         if (!res.ok) {
-          const txt = await res.text();
-          throw new Error("Personal save failed: " + txt);
+          throw new Error(await res.text());
         }
       }
 
       /* ============ 3) PAYROLL SAVE ============ */
-      /* ============ 3) PAYROLL SAVE ============ */
-      if (payrollDraft) {
-        const payload = {
-          employeeStatus: payrollDraft.employeeStatus ?? null,
-          designation: payrollDraft.designation ?? null,
-          basicRate: payrollDraft.basicRate ?? null,
-          dailyRate: payrollDraft.dailyRate ?? null,
-          hourlyRate: payrollDraft.hourlyRate ?? null,
-          leaveCredits: payrollDraft.leaveCredits ?? null,
-          sssNo: payrollDraft.sssNo ?? null,
-          hdmfNo: payrollDraft.hdmfNo ?? null,
-          tinNo: payrollDraft.tinNo ?? null,
-        };
-
+      if (payrollDraft && Object.keys(payrollDraft).length > 0) {
         const res = await fetch(
           `http://localhost:5000/api/employees/${selectedEmployeeId}/payroll`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
+            headers: {
+              "Content-Type": "application/json",
+              ...authHeaders,
+            },
+            body: JSON.stringify(payrollDraft), // ✅ send raw draft
           }
         );
 
         if (!res.ok) {
-          const txt = await res.text();
-          throw new Error("Payroll save failed: " + txt);
+          throw new Error(await res.text());
         }
       }
 
       /* ============ CLEANUP ============ */
       setIsEditing(false);
       setSelectedFile(null);
-
-      // optional: keep drafts or clear them
-      // setPayrollDraft(null);
-      // setPersonalDraft(null);
+      setPayrollDraft(null);
+      setPersonalDraft(null);
 
       console.log("SAVE DONE ✅");
     } catch (err) {
-      console.error(err);
+      console.error("SAVE FAILED ❌", err);
     }
   };
 
@@ -127,22 +130,23 @@ export default function EmployeeProfile() {
             isEditing={isEditing}
             onEdit={() => setIsEditing(true)}
             onSave={handleSave}
-            onCancel={() => setIsEditing(false)}
+            onCancel={() => {
+              setIsEditing(false);
+              setPayrollDraft(null);
+              setPersonalDraft(null);
+            }}
             onSelectEmployee={(id) => setSelectedEmployeeId(id)}
           />
 
           {/* ================= PAGE: PERSONAL ================= */}
           {page === "personal" && (
-            <div
-              className="animate-fadeSlideIn"
-              style={{ animationDuration: "0.45s" }}
-            >
+            <div className="animate-fadeSlideIn" style={{ animationDuration: "0.45s" }}>
               <PersonalInformation
                 isEditing={isEditing}
                 selectedEmployeeId={selectedEmployeeId}
                 selectedFile={selectedFile}
                 setSelectedFile={setSelectedFile}
-                setPersonalDraft={setPersonalDraft} // ✅ rename + pass
+                setPersonalDraft={setPersonalDraft}
                 goNext={() => setPage("education")}
               />
 
@@ -158,10 +162,7 @@ export default function EmployeeProfile() {
 
           {/* ================= PAGE: EDUCATION ================= */}
           {page === "education" && (
-            <div
-              className="animate-fadeSlideIn"
-              style={{ animationDuration: "0.45s" }}
-            >
+            <div className="animate-fadeSlideIn" style={{ animationDuration: "0.45s" }}>
               <EducationalSummary
                 selectedEmployeeId={selectedEmployeeId}
                 isEditing={isEditing}
@@ -173,10 +174,7 @@ export default function EmployeeProfile() {
 
           {/* ================= PAGE: EMPLOYMENT ================= */}
           {page === "employment" && (
-            <div
-              className="animate-fadeSlideIn"
-              style={{ animationDuration: "0.45s" }}
-            >
+            <div className="animate-fadeSlideIn" style={{ animationDuration: "0.45s" }}>
               <EmploymentHistory
                 selectedEmployeeId={selectedEmployeeId}
                 goBack={() => setPage("education")}

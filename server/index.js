@@ -25,7 +25,7 @@ app.get("/", (req,res) =>{
 //mount api routes under /api user
 app.use("/api", userRoutes);
 app.use("/api", transactionRoutes);
-app.use("/api", employeeRoutes);    
+app.use("/api/employees", employeeRoutes);    
 app.use("/uploads", express.static("uploads"));
 
 //start server

@@ -90,8 +90,14 @@ export default function PersonalInformation({
       full_name: form.fullName || null,
       address: form.address || null,
       place_of_birth: form.placeOfBirth || null,
-      date_of_birth: form.dateOfBirth || null,
-      date_hired: form.dateHired || null,
+      date_of_birth:
+        form.dateOfBirth && form.dateOfBirth !== "mm/dd/yyyy"
+          ? form.dateOfBirth
+          : null,
+      date_hired:
+        form.dateHired && form.dateHired !== "mm/dd/yyyy"
+          ? form.dateHired
+          : null,
       civil_status: form.civilStatus || null,
       citizenship: form.citizenship || null,
       spouse_name: form.nameOfSpouse || null,
@@ -140,9 +146,7 @@ export default function PersonalInformation({
             label="Place of Birth"
             value={form.placeOfBirth}
             disabled={!isEditing}
-            onChange={(e) =>
-              handleChange("placeOfBirth", e.target.value)
-            }
+            onChange={(e) => handleChange("placeOfBirth", e.target.value)}
           />
 
           <TextField
@@ -150,18 +154,14 @@ export default function PersonalInformation({
             type="date"
             value={form.dateOfBirth}
             disabled={!isEditing}
-            onChange={(e) =>
-              handleChange("dateOfBirth", e.target.value)
-            }
+            onChange={(e) => handleChange("dateOfBirth", e.target.value)}
           />
 
           <Dropdown
             label="Civil Status"
             value={form.civilStatus}
             disabled={!isEditing}
-            onChange={(e) =>
-              handleChange("civilStatus", e.target.value)
-            }
+            onChange={(e) => handleChange("civilStatus", e.target.value)}
             options={[
               { value: "single", label: "Single" },
               { value: "married", label: "Married" },
@@ -173,9 +173,7 @@ export default function PersonalInformation({
             label="Citizenship"
             value={form.citizenship}
             disabled={!isEditing}
-            onChange={(e) =>
-              handleChange("citizenship", e.target.value)
-            }
+            onChange={(e) => handleChange("citizenship", e.target.value)}
           />
         </div>
 
@@ -186,9 +184,7 @@ export default function PersonalInformation({
             type="date"
             value={form.dateHired}
             disabled={!isEditing}
-            onChange={(e) =>
-              handleChange("dateHired", e.target.value)
-            }
+            onChange={(e) => handleChange("dateHired", e.target.value)}
           />
 
           <TextField label="Department" value={form.department} disabled />
@@ -197,45 +193,35 @@ export default function PersonalInformation({
             label="Position"
             value={form.position}
             disabled={!isEditing}
-            onChange={(e) =>
-              handleChange("position", e.target.value)
-            }
+            onChange={(e) => handleChange("position", e.target.value)}
           />
 
           <TextField
             label="Email Address"
             value={form.emailAddress}
             disabled={!isEditing}
-            onChange={(e) =>
-              handleChange("emailAddress", e.target.value)
-            }
+            onChange={(e) => handleChange("emailAddress", e.target.value)}
           />
 
           <TextField
             label="Name of Spouse"
             value={form.nameOfSpouse}
             disabled={!isEditing}
-            onChange={(e) =>
-              handleChange("nameOfSpouse", e.target.value)
-            }
+            onChange={(e) => handleChange("nameOfSpouse", e.target.value)}
           />
 
           <TextField
             label="Contact No."
             value={form.contactNo}
             disabled={!isEditing}
-            onChange={(e) =>
-              handleChange("contactNo", e.target.value)
-            }
+            onChange={(e) => handleChange("contactNo", e.target.value)}
           />
 
           <TextField
             label="Spouse Address"
             value={form.spouseAddress}
             disabled={!isEditing}
-            onChange={(e) =>
-              handleChange("spouseAddress", e.target.value)
-            }
+            onChange={(e) => handleChange("spouseAddress", e.target.value)}
           />
 
           <div className="flex justify-end">

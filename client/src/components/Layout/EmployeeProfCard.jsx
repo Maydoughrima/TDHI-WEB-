@@ -26,8 +26,11 @@ export default function EmployeeProfCard({
   useEffect(() => {
     async function loadDepartments() {
       try {
-        const res = await fetch("http://localhost:5000/api/departments");
+        const res = await fetch("http://localhost:5000/api/employees/departments");
         const json = await res.json();
+
+        console.log("DEPARTMENTS RESPONSE", json);
+
         setDepartments(json.data || []);
       } catch (err) {
         console.error("Failed to fetch departments:", err);
