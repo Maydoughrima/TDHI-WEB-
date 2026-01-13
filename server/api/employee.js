@@ -52,7 +52,7 @@ router.get("/departments", async (_, res) => {
       ORDER BY department ASC
     `);
 
-    res.json({ success: true, data: rows.map((r) => r.department) });
+    res.json({ success: true, data: rows.map(r => r.department) });
   } catch (err) {
     console.error("Departments error:", err);
     res.status(500).json({ success: false });
@@ -120,7 +120,7 @@ router.get("/:id", async (req, res) => {
 
 /* ======================================================
    PATCH /api/employees/:id
-   PERSONAL INFO + AUDIT
+   EMPLOYEE PROFILE (PERSONAL INFO) + AUDIT
 ====================================================== */
 router.patch("/:id", async (req, res) => {
   const client = await pool.connect();
@@ -193,19 +193,17 @@ router.patch("/:id", async (req, res) => {
           actorId,
           actorRole,
           action: "EDIT",
-          entity: "EMPLOYEE",
+          entity: "EMPLOYEE_PROFILE", // ✅ MATCHES ENUM
           entityId: employeeId,
           status: "COMPLETED",
-          description: `${key} changed from "${old[key] ?? "NULL"}" to "${
-            fields[key]
-          }"`,
+          description: `${key} changed from "${old[key] ?? "NULL"}" to "${fields[key]}"`
         });
       }
     }
 
     res.json({ success: true });
   } catch (err) {
-    console.error("Save personal info error:", err);
+    console.error("Save employee profile error:", err);
     res.status(500).json({ success: false });
   } finally {
     client.release();
@@ -235,16 +233,16 @@ router.get("/:id/payroll", async (req, res) => {
       [req.params.id]
     );
 
-    return res.json({ success: true, data: rows[0] || null });
+    res.json({ success: true, data: rows[0] || null });
   } catch (err) {
     console.error("Fetch payroll error:", err);
-    return res.status(500).json({ success: false });
+    res.status(500).json({ success: false });
   }
 });
 
 /* ======================================================
    POST /api/employees/:id/payroll
-   UPSERT + AUDIT
+   EMPLOYEE PAYROLL INFO + AUDIT
 ====================================================== */
 router.post("/:id/payroll", async (req, res) => {
   const client = await pool.connect();
@@ -312,19 +310,17 @@ router.post("/:id/payroll", async (req, res) => {
           actorId,
           actorRole,
           action: "EDIT",
-          entity: "PAYROLL",
+          entity: "EMPLOYEE_PAYROLL_INFO", // ✅ MATCHES ENUM
           entityId: employeeId,
           status: "COMPLETED",
-          description: `${k} changed from "${old[k] ?? "NULL"}" to "${
-            p[k] ?? "NULL"
-          }"`,
+          description: `${k} changed from "${old[k] ?? "NULL"}" to "${p[k] ?? "NULL"}"`
         });
       }
     }
 
     res.json({ success: true });
   } catch (err) {
-    console.error("Save payroll error:", err);
+    console.error("Save employee payroll error:", err);
     res.status(500).json({ success: false });
   } finally {
     client.release();
