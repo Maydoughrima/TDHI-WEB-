@@ -367,24 +367,26 @@ router.patch("/:id", async (req, res) => {
       contact_no: req.body.contact_no,
       email: req.body.email,
       position: req.body.position,
+      department: req.body.department,
     };
 
     await client.query(
       `
       UPDATE employees SET
-        full_name = COALESCE($1, full_name),
-        address = COALESCE($2, address),
-        place_of_birth = COALESCE($3, place_of_birth),
-        date_of_birth = COALESCE($4, date_of_birth),
-        date_hired = COALESCE($5, date_hired),
-        civil_status = COALESCE($6, civil_status),
-        citizenship = COALESCE($7, citizenship),
-        spouse_name = COALESCE($8, spouse_name),
-        spouse_address = COALESCE($9, spouse_address),
-        contact_no = COALESCE($10, contact_no),
-        email = COALESCE($11, email),
-        position = COALESCE($12, position)
-      WHERE id = $13
+      full_name = COALESCE($1, full_name),
+      address = COALESCE($2, address),
+      place_of_birth = COALESCE($3, place_of_birth),
+      date_of_birth = COALESCE($4, date_of_birth),
+      date_hired = COALESCE($5, date_hired),
+      civil_status = COALESCE($6, civil_status),
+      citizenship = COALESCE($7, citizenship),
+      spouse_name = COALESCE($8, spouse_name),
+      spouse_address = COALESCE($9, spouse_address),
+      contact_no = COALESCE($10, contact_no),
+      email = COALESCE($11, email),
+      position = COALESCE($12, position),
+      department = COALESCE($13, department)  -- ✅
+      WHERE id = $14
       `,
       [
         fields.full_name,
@@ -399,6 +401,7 @@ router.patch("/:id", async (req, res) => {
         fields.contact_no,
         fields.email,
         fields.position,
+        fields.department,
         employeeId,
       ]
     );

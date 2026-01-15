@@ -8,6 +8,7 @@ import PersonalDetailsModal from "../Composite/PersonalDetailsModal";
 import PayrollInfoModal from "../Composite/PayrollInfoModal";
 import UploadImageModal from "../Composite/UploadImageModal";
 
+
 export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
   const [step, setStep] = useState(1);
 

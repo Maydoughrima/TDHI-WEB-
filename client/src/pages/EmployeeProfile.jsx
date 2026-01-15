@@ -178,6 +178,7 @@ export default function EmployeeProfile() {
               <EmploymentHistory
                 selectedEmployeeId={selectedEmployeeId}
                 goBack={() => setPage("education")}
+                isEditing={isEditing}
               />
             </div>
           )}

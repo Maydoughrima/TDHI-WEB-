@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaRegEdit } from "react-icons/fa";
 import { RiUserAddLine } from "react-icons/ri";
+
 import AddEmployeeModal from "../UI/AddEmployeeModal";
 import Button from "../UI/Button";
 
@@ -11,6 +12,7 @@ export default function EmployeeProfCard({
   isEditing,
   onSelectEmployee,
 }) {
+  /* ================= STATE ================= */
   const [departments, setDepartments] = useState([]);
   const [employees, setEmployees] = useState([]);
 
@@ -18,31 +20,31 @@ export default function EmployeeProfCard({
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 🔒 Track previous selection to avoid killing Save
-  const prevEmployeeRef = useRef(null);
+  /* ================= REFS ================= */
+  // Prevent accidental cancel during save
   const prevDeptRef = useRef(null);
+  const prevEmployeeRef = useRef(null);
 
   /* ================= FETCH DEPARTMENTS ================= */
   useEffect(() => {
     async function loadDepartments() {
       try {
-        const res = await fetch("http://localhost:5000/api/employees/departments");
+        const res = await fetch("http://localhost:5000/api/departments");
         const json = await res.json();
-        
-        console.log("DEPARTMENTS RESPONSE", json);
-
         setDepartments(json.data || []);
       } catch (err) {
         console.error("Failed to fetch departments:", err);
       }
     }
+
     loadDepartments();
   }, []);
 
-  /* ================= FETCH EMPLOYEES ================= */
+  /* ================= FETCH EMPLOYEES BY DEPARTMENT ================= */
   useEffect(() => {
     if (!selectedDept) {
       setEmployees([]);
+      setSelectedEmployee("");
       return;
     }
 
@@ -54,60 +56,66 @@ export default function EmployeeProfCard({
         const json = await res.json();
         setEmployees(json.data || []);
       } catch (err) {
-        console.error("Failed to load employees", err);
+        console.error("Failed to fetch employees:", err);
       }
     }
 
     loadEmployees();
   }, [selectedDept]);
 
-  /* ================= CANCEL EDIT ONLY ON ACTUAL CHANGE ================= */
+  /* ================= AUTO-CANCEL ON SELECTION CHANGE ================= */
   useEffect(() => {
+    const deptChanged =
+      prevDeptRef.current && prevDeptRef.current !== selectedDept;
+
     const employeeChanged =
       prevEmployeeRef.current &&
       prevEmployeeRef.current !== selectedEmployee;
 
-    const deptChanged =
-      prevDeptRef.current && prevDeptRef.current !== selectedDept;
-
-    if (isEditing && (employeeChanged || deptChanged)) {
+    if (isEditing && (deptChanged || employeeChanged)) {
       onCancel();
     }
 
-    prevEmployeeRef.current = selectedEmployee;
     prevDeptRef.current = selectedDept;
-  }, [selectedEmployee, selectedDept, isEditing, onCancel]);
+    prevEmployeeRef.current = selectedEmployee;
+  }, [selectedDept, selectedEmployee, isEditing, onCancel]);
 
+  /* ================= HANDLERS ================= */
+  const handleDepartmentChange = (e) => {
+    setSelectedDept(e.target.value);
+    setSelectedEmployee("");
+  };
+
+  const handleEmployeeChange = (e) => {
+    const id = e.target.value;
+    setSelectedEmployee(id);
+    onSelectEmployee(id);
+  };
+
+  /* ================= UI ================= */
   return (
     <div className="cta-card flex flex-col md:flex-row justify-between bg-bg p-4 rounded-md shadow-md gap-4">
       {/* ================= DROPDOWNS ================= */}
       <div className="flex flex-col sm:flex-row gap-2 md:gap-4 w-full md:w-auto">
-        {/* Department Dropdown */}
+        {/* Department */}
         <select
           className="border rounded-lg p-2 bg-white text-sm"
           value={selectedDept}
-          onChange={(e) => {
-            setSelectedDept(e.target.value);
-            setSelectedEmployee("");
-          }}
+          onChange={handleDepartmentChange}
         >
           <option value="">Select Department</option>
           {departments.map((dept) => (
-            <option key={dept} value={dept}>
-              {dept}
+            <option key={dept.id ?? dept} value={dept.name ?? dept}>
+              {dept.name ?? dept}
             </option>
           ))}
         </select>
 
-        {/* Employee Dropdown */}
+        {/* Employee */}
         <select
           className="border rounded-lg p-2 bg-white text-sm"
           value={selectedEmployee}
-          onChange={(e) => {
-            const id = e.target.value;
-            setSelectedEmployee(id);
-            onSelectEmployee(id);
-          }}
+          onChange={handleEmployeeChange}
           disabled={!selectedDept}
         >
           <option value="">Select Employee</option>
@@ -119,8 +127,8 @@ export default function EmployeeProfCard({
         </select>
       </div>
 
-      {/* ================= BUTTONS ================= */}
-      <div className="flex flex-col sm:flex-row gap-2 md:gap-2">
+      {/* ================= ACTION BUTTONS ================= */}
+      <div className="flex flex-col sm:flex-row gap-2">
         {!isEditing && (
           <>
             <Button
@@ -158,10 +166,11 @@ export default function EmployeeProfCard({
         )}
       </div>
 
+      {/* ================= ADD EMPLOYEE MODAL ================= */}
       <AddEmployeeModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onEmployeeAdded = {(emp) =>{
+        onEmployeeAdded={(emp) => {
           setIsModalOpen(false);
           setSelectedDept(emp.department);
           setSelectedEmployee(emp.id);

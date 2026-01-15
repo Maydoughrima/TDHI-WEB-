@@ -1,153 +1,212 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Button from "../UI/Button";
+import SuccessModal from "../UI/SuccessModal";
 
-export default function AddEducationalSummaryModal({ isOpen, onClose, onSave }) {
+export default function AddEducationalSummaryModal({
+  isOpen,
+  onClose,
+  employeeId,
+  onAdded,
+  editData,
+}) {
   const [form, setForm] = useState({
-    school: "",
+    school_name: "",
     degree: "",
-    batch: "",
+    year_start: "",
+    year_end: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  /* ================= PREFILL (EDIT MODE) ================= */
+  useEffect(() => {
+    if (editData) {
+      setForm({
+        school_name: editData.school_name ?? "",
+        degree: editData.degree ?? "",
+        year_start: editData.year_start ?? "",
+        year_end: editData.year_end ?? "",
+      });
+    }
+  }, [editData]);
 
   function handleChange(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  function resetAll() {
-    setForm({ school: "", degree: "", batch: "" });
+  function resetForm() {
+    setForm({
+      school_name: "",
+      degree: "",
+      year_start: "",
+      year_end: "",
+    });
     setError("");
     setLoading(false);
+  }
+
+  function closeAll() {
+    resetForm();
+    setShowSuccess(false);
     onClose();
   }
 
+  /* ================= SUBMIT ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      /* ---------------------------
-         BACKEND READY (example)
-      ------------------------------
-      
-      const res = await fetch("/api/education/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+      const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+
+      const url = editData
+        ? `http://localhost:5000/api/employees/education/${editData.id}`
+        : `http://localhost:5000/api/employees/${employeeId}/education`;
+
+      const method = editData ? "PATCH" : "POST";
+
+      const payload = {
+        school_name: form.school_name,
+        degree: form.degree,
+        year_start: form.year_start ? Number(form.year_start) : null,
+        year_end: form.year_end ? Number(form.year_end) : null,
+      };
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": storedUser?.id,
+        },
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Failed to add education");
-      */
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
 
-      // TEMP MOCK SAVE
-      console.log("EDUCATION SUBMITTED:", form);
-
-      // Pass form back to parent if needed
-      if (onSave) onSave(form);
-
-      resetAll();
+      onAdded?.();
+      setShowSuccess(true);
     } catch (err) {
-      setError(err.message);
+      setError(err?.message || "Failed to save education");
       setLoading(false);
     }
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* BACKDROP */}
-          <motion.div
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
-            onClick={resetAll}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          />
+    <>
+      {/* ADD / EDIT MODAL */}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+              onClick={closeAll}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
 
-          {/* MODAL */}
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-          >
-            <form
-              onSubmit={handleSubmit}
-              className="bg-white rounded-xl shadow-xl p-6 w-full max-w-3xl"
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
             >
-              {/* HEADER */}
-              <h2 className="text-xl font-bold text-primary text-center mb-6">
-                Add Educational Background
-              </h2>
+              <form
+                onSubmit={handleSubmit}
+                className="bg-white rounded-xl shadow-xl p-6 w-full max-w-3xl"
+              >
+                <h2 className="text-xl font-bold text-primary text-center mb-6">
+                  {editData
+                    ? "Edit Educational Background"
+                    : "Add Educational Background"}
+                </h2>
 
-              {error && (
-                <p className="text-red-500 text-center mb-4">{error}</p>
-              )}
+                {error && (
+                  <p className="text-red-500 text-center mb-4">{error}</p>
+                )}
 
-              {/* FORM */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium">School</label>
-                  <input
-                    type="text"
-                    value={form.school}
-                    onChange={(e) => handleChange("school", e.target.value)}
-                    className="border rounded-md p-2 text-sm"
-                    placeholder="University / College / School"
-                    required
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    label="School / University"
+                    value={form.school_name}
+                    onChange={(v) => handleChange("school_name", v)}
                   />
-                </div>
 
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium">Degree</label>
-                  <input
-                    type="text"
+                  <Input
+                    label="Degree / Course"
                     value={form.degree}
-                    onChange={(e) => handleChange("degree", e.target.value)}
-                    className="border rounded-md p-2 text-sm"
-                    placeholder="Course / Education"
-                    required
+                    onChange={(v) => handleChange("degree", v)}
+                  />
+
+                  <Input
+                    label="Start Year"
+                    value={form.year_start}
+                    onChange={(v) => handleChange("year_start", v)}
+                    placeholder="e.g. 2019"
+                  />
+
+                  <Input
+                    label="End Year (leave empty if present)"
+                    value={form.year_end}
+                    onChange={(v) => handleChange("year_end", v)}
+                    placeholder="e.g. 2023"
                   />
                 </div>
 
-                <div className="flex flex-col gap-2 md:col-span-2">
-                  <label className="text-sm font-medium">Batch / Years</label>
-                  <input
-                    type="text"
-                    value={form.batch}
-                    onChange={(e) => handleChange("batch", e.target.value)}
-                    className="border rounded-md p-2 text-sm"
-                    placeholder="Ex: Batch 2018 - 2022"
-                    required
-                  />
+                <div className="flex justify-end gap-3 mt-8">
+                  <Button
+                    type="button"
+                    className="bg-gray-100 text-secondary shadow-sm"
+                    onClick={closeAll}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-secondary text-bg shadow-sm"
+                  >
+                    {loading ? "Saving..." : "Save Education"}
+                  </Button>
                 </div>
-              </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
-              {/* BUTTONS */}
-              <div className="flex justify-end gap-3 mt-8">
-                <Button
-                  type="button"
-                  className="bg-gray-100 text-secondary shadow-sm"
-                  onClick={resetAll}
-                >
-                  Cancel
-                </Button>
+      {/* SUCCESS MODAL (REUSED COMPONENT) */}
+      <SuccessModal
+        isOpen={showSuccess}
+        message={
+          editData
+            ? "Educational background updated successfully."
+            : "Educational background added successfully."
+        }
+        onClose={closeAll}
+      />
+    </>
+  );
+}
 
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-secondary text-bg flex items-center gap-1 shadow-sm"
-                >
-                  {loading ? "Saving..." : "Save Education"}
-                </Button>
-              </div>
-            </form>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+/* ================= INPUT HELPER ================= */
+function Input({ label, value, onChange, placeholder }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium">{label}</label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="border rounded-md p-2 text-sm"
+      />
+    </div>
   );
 }

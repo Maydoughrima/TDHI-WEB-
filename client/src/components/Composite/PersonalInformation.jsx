@@ -21,6 +21,23 @@ export default function PersonalInformation({
   setPersonalDraft,
   goNext,
 }) {
+  /* ================= DEPARTMENTS ================= */
+  const [departments, setDepartments] = useState([]);
+
+  useEffect(() => {
+    async function loadDepartments() {
+      try {
+        const res = await fetch("http://localhost:5000/api/departments");
+        const json = await res.json();
+        setDepartments(json.data || []);
+      } catch (err) {
+        console.error("Failed to load departments:", err);
+      }
+    }
+
+    loadDepartments();
+  }, []);
+
   /* ================= LOCAL FORM STATE ================= */
   const [form, setForm] = useState({
     employeeNo: "",
@@ -41,7 +58,7 @@ export default function PersonalInformation({
 
   const [imageUrl, setImageUrl] = useState(null);
 
-  // 🔒 prevent first-load from triggering draft
+  // 🔒 Prevent first load from triggering draft update
   const didInitRef = useRef(false);
 
   /* ================= LOAD EMPLOYEE ================= */
@@ -52,15 +69,13 @@ export default function PersonalInformation({
       try {
         const emp = await fetchEmployeeById(selectedEmployeeId);
 
-        const loaded = {
+        setForm({
           employeeNo: emp.employee_no ?? "",
           fullName: emp.full_name ?? "",
           address: emp.address ?? "",
           placeOfBirth: emp.place_of_birth ?? "",
-
           dateOfBirth: formatDateForInput(emp.date_of_birth),
           dateHired: formatDateForInput(emp.date_hired),
-
           department: emp.department ?? "",
           position: emp.position ?? "",
           emailAddress: emp.email ?? "",
@@ -69,12 +84,9 @@ export default function PersonalInformation({
           citizenship: emp.citizenship ?? "",
           spouseAddress: emp.spouse_address ?? "",
           contactNo: emp.contact_no ?? "",
-        };
+        });
 
-        setForm(loaded);
         setImageUrl(emp.image_url || null);
-
-        // reset draft init guard
         didInitRef.current = false;
       } catch (err) {
         console.error("Failed to load employee:", err);
@@ -84,11 +96,10 @@ export default function PersonalInformation({
     loadEmployee();
   }, [selectedEmployeeId]);
 
-  /* ================= SYNC DRAFT (EDIT ONLY) ================= */
+  /* ================= SYNC DRAFT (EDIT MODE ONLY) ================= */
   useEffect(() => {
     if (!isEditing) return;
 
-    // 🚫 skip initial load
     if (!didInitRef.current) {
       didInitRef.current = true;
       return;
@@ -107,6 +118,7 @@ export default function PersonalInformation({
       contact_no: form.contactNo || null,
       email: form.emailAddress || null,
       position: form.position || null,
+      department: form.department || null,
     });
   }, [form, isEditing, setPersonalDraft]);
 
@@ -161,6 +173,7 @@ export default function PersonalInformation({
 
           <Dropdown
             label="Civil Status"
+            placeHolder="Select Civil Status"
             value={form.civilStatus}
             disabled={!isEditing}
             onChange={(e) => handleChange("civilStatus", e.target.value)}
@@ -189,7 +202,17 @@ export default function PersonalInformation({
             onChange={(e) => handleChange("dateHired", e.target.value)}
           />
 
-          <TextField label="Department" value={form.department} disabled />
+          <Dropdown
+            label="Department"
+            placeHolder="Select Department"
+            value={form.department}
+            disabled={!isEditing}
+            onChange={(e) => handleChange("department", e.target.value)}
+            options={departments.map((d) => ({
+              value: d.name ?? d,
+              label: d.name ?? d,
+            }))}
+          />
 
           <TextField
             label="Position"

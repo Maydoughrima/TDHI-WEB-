@@ -1,11 +1,27 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import TextField from "../UI/Textfield";
 import Dropdown from "../UI/Dropdown";
 
-export default function PersonalDetailsModal ({form, handleChange}){
-    return (
-        <div className="grid grid-cols-1  md:grid-cols-2 gap-x-10 gap-y-5">
+export default function PersonalDetailsModal({ form, handleChange }) {
+  const [departments, setDepartments] = useState([]);
 
+  /* ================= LOAD DEPARTMENTS ================= */
+  useEffect(() => {
+    async function loadDepartments() {
+      try {
+        const res = await fetch("http://localhost:5000/api/departments");
+        const json = await res.json();
+        setDepartments(json.data || []);
+      } catch (err) {
+        console.error("Failed to load departments:", err);
+      }
+    }
+
+    loadDepartments();
+  }, []);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
       {/* LEFT COLUMN */}
       <div className="flex flex-col gap-4">
         <TextField
@@ -34,12 +50,14 @@ export default function PersonalDetailsModal ({form, handleChange}){
 
         <TextField
           label="Date of Birth"
+          type="date"
           value={form.dateOfBirth}
           onChange={(e) => handleChange("dateOfBirth", e.target.value)}
         />
 
         <Dropdown
           label="Civil Status"
+          placeholder="Select Civil Status"
           value={form.civilStatus}
           onChange={(e) => handleChange("civilStatus", e.target.value)}
           options={[
@@ -56,18 +74,25 @@ export default function PersonalDetailsModal ({form, handleChange}){
         />
       </div>
 
-      {/* MIDDLE COLUMN */}
+      {/* RIGHT COLUMN */}
       <div className="flex flex-col gap-4">
         <TextField
           label="Date Hired"
+          type="date"
           value={form.dateHired}
           onChange={(e) => handleChange("dateHired", e.target.value)}
         />
 
-        <TextField
+        {/* ✅ DEPARTMENT DROPDOWN */}
+        <Dropdown
           label="Department"
+          placeholder="Select Department"
           value={form.department}
           onChange={(e) => handleChange("department", e.target.value)}
+          options={departments.map((d) => ({
+            value: d.name,
+            label: d.name,
+          }))}
         />
 
         <TextField
@@ -100,7 +125,6 @@ export default function PersonalDetailsModal ({form, handleChange}){
           onChange={(e) => handleChange("spouseAddress", e.target.value)}
         />
       </div>
-
     </div>
-    )
+  );
 }
