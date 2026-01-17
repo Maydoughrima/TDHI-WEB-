@@ -217,6 +217,21 @@ router.post("/", upload.single("image"), async (req, res) => {
 
     await client.query("BEGIN");
 
+    /* 🔴 CHECK IF EMPLOYEE NO EXISTS */
+    const exists = await client.query(
+      `SELECT 1 FROM employees WHERE employee_no = $1 LIMIT 1`,
+      [employeeNo]
+    );
+
+    if (exists.rowCount > 0) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        success: false,
+        code: "EMPLOYEE_NO_EXISTS",
+        message: "Employee number already exists",
+      });
+    }
+
     /* ================= INSERT EMPLOYEE ================= */
     const empResult = await client.query(
       `

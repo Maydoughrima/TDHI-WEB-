@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import DuplicateEmployeeNoModal from "./DuplicateEmployeeNoModal";
 
 import Button from "../UI/Button";
 import { IoIosArrowForward, IoIosArrowBack } from "react-icons/io";
@@ -8,9 +9,9 @@ import PersonalDetailsModal from "../Composite/PersonalDetailsModal";
 import PayrollInfoModal from "../Composite/PayrollInfoModal";
 import UploadImageModal from "../Composite/UploadImageModal";
 
-
 export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
   const [step, setStep] = useState(1);
+  const [showduplicateModal, setshowDuplicateModal] = useState(false);
 
   const [form, setForm] = useState({
     employeeNo: "",
@@ -73,6 +74,11 @@ export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
       });
 
       const json = await res.json();
+
+      if (res.status === 409 && json.code === "EMPLOYEE_NO_EXISTS") {
+        setshowDuplicateModal(true);
+        return;
+      }
       if (!res.ok) throw new Error("Failed to add employee");
 
       onEmployeeAdded(json.data); // 🔥 notify parent
@@ -206,6 +212,10 @@ export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
           </motion.div>
         </>
       )}
+      <DuplicateEmployeeNoModal
+        isOpen={showduplicateModal}
+        onClose={() => setshowDuplicateModal(false)}
+      />
     </AnimatePresence>
   );
 }

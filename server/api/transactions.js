@@ -9,8 +9,10 @@ const router = express.Router();
  * PURPOSE:
  * - Fetch audit log (transactions)
  * - Supports filtering (action, status)
- * - Supports pagination (limit, offset)
- * - JOIN users table to get actor info
+ * - Supports pagination
+ * - Shows:
+ *   ✅ Actor (who did it)
+ *   ✅ Affected account (who was changed)
  */
 router.get("/transactions", async (req, res) => {
   try {
@@ -24,21 +26,18 @@ router.get("/transactions", async (req, res) => {
     const values = [];
     let whereClause = "WHERE 1=1";
 
-    // 🔹 Filter by action
+    /* FILTERS */
     if (action && action !== "ALL") {
       values.push(action);
       whereClause += ` AND t.action = $${values.length}`;
     }
 
-    // 🔹 Filter by status
     if (status && status !== "ALL") {
       values.push(status);
       whereClause += ` AND t.status = $${values.length}`;
     }
 
-    // =============================
-    // 🔹 COUNT QUERY (pagination)
-    // =============================
+    /* COUNT */
     const countQuery = `
       SELECT COUNT(*)
       FROM transactions t
@@ -46,11 +45,9 @@ router.get("/transactions", async (req, res) => {
     `;
 
     const countResult = await pool.query(countQuery, values);
-    const total = parseInt(countResult.rows[0].count, 10);
+    const total = Number(countResult.rows[0].count);
 
-    // =============================
-    // 🔹 DATA QUERY (JOIN users)
-    // =============================
+    /* DATA QUERY */
     values.push(limit);
     values.push(offset);
 
@@ -65,13 +62,18 @@ router.get("/transactions", async (req, res) => {
         t.description,
         t.created_at,
 
-        -- 🔥 JOINED USER DATA
+        -- ACTOR
         u.id AS actor_id,
         u.fullname AS actor_name,
-        u.role AS actor_role
+        u.role AS actor_role,
+
+        -- 🔥 AFFECTED ACCOUNT
+        e.id AS affected_employee_id,
+        e.full_name AS affected_employee_name
 
       FROM transactions t
       JOIN users u ON u.id = t.actor_id
+      LEFT JOIN employees e ON e.id = t.entity_id
 
       ${whereClause}
       ORDER BY t.created_at DESC
