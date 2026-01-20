@@ -10,6 +10,8 @@ import transactionRoutes from "./api/transactions.js";
 import departmentRoutes from "./api/departments.js";
 import employmentHistoryRoutes from "./api/employeeEmploymentHistory.js"
 import educationRoutes from "./api/employeeEducation.js"
+import employeeGovernmentDeductions from "./api/employeeGovernmentDeductions.js"
+import employeeLoans from "./api/employeeLoans.js"
 
 dotenv.config();
 
@@ -30,9 +32,11 @@ app.use("/api", userRoutes);
 app.use("/api", transactionRoutes);
 app.use("/api/employees", employeeRoutes);    
 app.use("/uploads", express.static("uploads"));
-app.use("/api/departments", departmentRoutes)
-app.use("/api/employees", employmentHistoryRoutes)
-app.use("/api/employees", educationRoutes)
+app.use("/api/departments", departmentRoutes);
+app.use("/api/employees", employmentHistoryRoutes);
+app.use("/api/employees", educationRoutes);
+app.use ("/api/employees",employeeGovernmentDeductions);
+app.use ("/api/employees",employeeLoans);
 
 //start server
 app.listen(PORT, () => {

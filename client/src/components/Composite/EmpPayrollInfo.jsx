@@ -173,7 +173,9 @@ export default function EmpPayrollInfo({
           />
         </div>
 
-        <EmpDeductions employeeId={selectedEmployeeId} />
+        <EmpDeductions employeeId={selectedEmployeeId}
+        basicRate = {Number(form.basicRate || 0)}
+        />
       </div>
     </div>
   );

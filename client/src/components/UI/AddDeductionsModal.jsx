@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { IoClose } from "react-icons/io5";
 import Button from "./Button";
 
@@ -10,11 +10,14 @@ export default function AddDeductionsModal({
   isOpen,
   onClose,
   employeeId,
-  onSuccess, // callback after add (optional)
+  onSuccess,
 }) {
   const [form, setForm] = useState({
-    type: "",
-    amount: "",
+    loan_type: "",
+    principal_amount: "",
+    monthly_amortization: "",
+    cutoff_behavior: "",
+    start_date: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -27,8 +30,20 @@ export default function AddDeductionsModal({
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!form.type || !form.amount) {
-      setError("All fields are required");
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!user?.id) {
+      setError("User session not found. Please re-login.");
+      return;
+    }
+
+    if (
+      !form.loan_type ||
+      !form.monthly_amortization ||
+      !form.cutoff_behavior ||
+      !form.start_date
+    ) {
+      setError("Please complete all required fields");
       return;
     }
 
@@ -36,27 +51,29 @@ export default function AddDeductionsModal({
     setError(null);
 
     try {
-      /**
-       * MOCK API (FOR NOW)
-       * ------------------------
-       * POST /api/employees/:id/deductions
-       */
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      console.log("ADD DEDUCTION:", {
-        employeeId,
-        type: form.type,
-        amount: Number(form.amount),
+      const res = await fetch(`/api/employees/${employeeId}/loans`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id, // ✅ FIXED
+        },
+        body: JSON.stringify({
+          loan_type: form.loan_type,
+          principal_amount: form.principal_amount || form.monthly_amortization,
+          monthly_amortization: Number(form.monthly_amortization),
+          cutoff_behavior: form.cutoff_behavior,
+          start_date: form.start_date,
+        }),
       });
 
-      // reset
-      setForm({ type: "", amount: "" });
-      setLoading(false);
+      if (!res.ok) throw new Error("Failed to save loan");
 
-      if (onSuccess) onSuccess();
+      onSuccess?.();
       onClose();
     } catch (err) {
-      setError("Failed to add deduction");
+      console.error(err);
+      setError("Failed to save loan");
+    } finally {
       setLoading(false);
     }
   }
@@ -64,95 +81,98 @@ export default function AddDeductionsModal({
   if (!isOpen) return null;
 
   return createPortal(
-    <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm px-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+    <motion.div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm px-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+    >
+      <motion.form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6"
+        initial={{ scale: 0.96, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
       >
-        <motion.form
-          onSubmit={handleSubmit}
-          className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6"
-          initial={{ scale: 0.95, y: 20 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.95, y: 20 }}
-        >
-          {/* HEADER */}
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-primary text-center">
-              Add Deduction
-            </h2>
+        {/* HEADER */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-primary">Add Loan</h2>
+          <Button
+            type="button"
+            className="border border-gray-300 shadow-none"
+            onClick={onClose}
+          >
+            <IoClose className="text-primary" />
+          </Button>
+        </div>
 
-            <Button
-              type="button"
-              className="border border-gray-300 shadow-sm"
-              onClick={onClose}
-            >
-              <IoClose 
-              className="text-primary"
-              />
-            </Button>
-          </div>
+        {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
 
-          {error && (
-            <p className="text-red-500 text-sm mb-3">{error}</p>
-          )}
+        {/* FORM */}
+        <div className="flex flex-col gap-4">
+          <select
+            value={form.loan_type}
+            onChange={(e) => handleChange("loan_type", e.target.value)}
+            className="p-2 border rounded-md"
+          >
+            <option value="">Select loan</option>
+            <option value="SSS_LOAN">SSS Loan</option>
+            <option value="PAGIBIG_LOAN">Pag-IBIG Loan</option>
+            <option value="COMPANY_LOAN">Company Loan</option>
+          </select>
 
-          {/* FORM */}
-          <div className="flex flex-col gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700">
-                Deduction Type
-              </label>
-              <input
-                type="text"
-                value={form.type}
-                onChange={(e) =>
-                  handleChange("type", e.target.value)
-                }
-                className="w-full mt-1 p-2 border rounded-md"
-                placeholder="e.g. SSS, Loan, Tax"
-              />
-            </div>
+          <input
+            type="number"
+            placeholder="Principal Amount (optional)"
+            value={form.principal_amount}
+            onChange={(e) => handleChange("principal_amount", e.target.value)}
+            className="p-2 border rounded-md"
+          />
 
-            <div>
-              <label className="text-sm font-medium text-gray-700">
-                Amount
-              </label>
-              <input
-                type="number"
-                value={form.amount}
-                onChange={(e) =>
-                  handleChange("amount", e.target.value)
-                }
-                className="w-full mt-1 p-2 border rounded-md"
-                placeholder="0.00"
-              />
-            </div>
-          </div>
+          <input
+            type="number"
+            placeholder="Monthly Amortization"
+            value={form.monthly_amortization}
+            onChange={(e) =>
+              handleChange("monthly_amortization", e.target.value)
+            }
+            className="p-2 border rounded-md"
+          />
 
-          {/* ACTIONS */}
-          <div className="flex justify-end gap-2 mt-6">
-            <Button
-              type="button"
-              className="border border-gray-300 shadow-sm text-primary"
-              onClick={onClose}
-            >
-              Cancel
-            </Button>
+          <select
+            value={form.cutoff_behavior}
+            onChange={(e) => handleChange("cutoff_behavior", e.target.value)}
+            className="p-2 border rounded-md"
+          >
+            <option value="">Select cutoff</option>
+            <option value="FIRST_CUTOFF_ONLY">1st Cutoff Only</option>
+            <option value="BOTH_CUTOFFS">Both Cutoffs</option>
+          </select>
 
-            <Button
-              type="submit"
-              className="bg-secondary text-bg"
-              disabled={loading}
-            >
-              {loading ? "Saving..." : "Add Deduction"}
-            </Button>
-          </div>
-        </motion.form>
-      </motion.div>
-    </AnimatePresence>,
-    modalRoot
+          <input
+            type="date"
+            value={form.start_date}
+            onChange={(e) => handleChange("start_date", e.target.value)}
+            className="p-2 border rounded-md"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 mt-6">
+          <Button
+            type="button"
+            onClick={onClose}
+            className="border border-gray-300 text-primary shadow-none"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={loading}
+            className="bg-secondary shadow-none"
+          >
+            {loading ? "Saving..." : "Add Loan"}
+          </Button>
+        </div>
+      </motion.form>
+    </motion.div>,
+    modalRoot,
   );
 }
