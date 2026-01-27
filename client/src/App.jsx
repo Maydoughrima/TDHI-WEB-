@@ -10,6 +10,7 @@ import EmployeeProfile from './pages/EmployeeProfile.jsx';
 import Transactions from './pages/Transactions.jsx';
 import Ledger from './pages/Ledger.jsx';
 import Reports from './pages/Reports.jsx';
+import PayslipView from './components/Composite/PayslipView.jsx';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path ="/user/ledger" element={<Ledger/>}/>
           <Route path ="/user/reports" element={<Reports/>}/>
           <Route path ="/user/transactions" element={<Transactions/>}/>
+          <Route path ="/payroll-files/:payrollFileId/payslips" element={<PayslipView/>}/>
         </Routes>
       </Router>
     </div>

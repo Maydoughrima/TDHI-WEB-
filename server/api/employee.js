@@ -60,6 +60,37 @@ router.get("/departments", async (_, res) => {
 });
 
 /* ======================================================
+   GET /api/employees/all
+   PURPOSE:
+   - Payroll usage
+   - Fetch all active employees
+====================================================== */
+router.get("/all", async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        e.id,
+        e.employee_no,
+        e.full_name,
+        e.department,
+        ep.employment_status
+      FROM employees e
+      LEFT JOIN employee_payroll ep
+        ON ep.employee_id = e.id
+      ORDER BY e.full_name ASC
+    `);
+
+    res.json({
+      success: true,
+      data: rows,
+    });
+  } catch (err) {
+    console.error("Fetch all employees error:", err);
+    res.status(500).json({ success: false });
+  }
+});
+
+/* ======================================================
    GET /api/employees?department=HR
 ====================================================== */
 router.get("/", async (req, res) => {

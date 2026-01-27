@@ -3,15 +3,12 @@ import { pool } from "../config/db.js";
 
 const router = express.Router();
 
-/**
- * ======================================================
- * ADD EMPLOYEE LOAN (WITH AUDIT)
- * POST /api/employees/:employeeId/loans
- * ======================================================
- */
+/* ======================================================
+   ADD EMPLOYEE LOAN (AUDITED + HR-SAFE)
+====================================================== */
 router.post("/:employeeId/loans", async (req, res) => {
   const { employeeId } = req.params;
-  const actorId = req.headers["x-user-id"]; // REQUIRED
+  const actorId = req.headers["x-user-id"];
 
   const {
     loan_type,
@@ -21,22 +18,40 @@ router.post("/:employeeId/loans", async (req, res) => {
     start_date,
   } = req.body;
 
-  /* ================= VALIDATION ================= */
-
   if (!actorId) {
-    return res.status(401).json({
-      message: "Missing actor identity (x-user-id)",
-    });
+    return res.status(401).json({ message: "Missing actor identity" });
   }
 
-  if (
-    !loan_type ||
-    !monthly_amortization ||
-    !cutoff_behavior ||
-    !start_date
-  ) {
+  if (!loan_type || !monthly_amortization || !cutoff_behavior || !start_date) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  /* ================= HR-SAFE CUTOFF VALIDATION ================= */
+  const FIRST = "FIRST_CUTOFF_ONLY";
+  const SECOND = "SECOND_CUTOFF_ONLY";
+
+  // normalize legacy value
+  let normalizedCutoff = cutoff_behavior;
+  if (cutoff_behavior === "BOTH_CUTOFFS") {
+    normalizedCutoff = SECOND;
+  }
+
+  const cutoffRules = {
+    SSS_LOAN: [FIRST],
+    PHILHEALTH_LOAN: [FIRST],
+    PAGIBIG_LOAN: [SECOND],
+    COMPANY_LOAN: [FIRST, SECOND],
+  };
+
+  if (!cutoffRules[loan_type]) {
+    return res.status(400).json({ message: "Invalid loan type" });
+  }
+
+  if (!cutoffRules[loan_type].includes(normalizedCutoff)) {
     return res.status(400).json({
-      message: "Missing required loan fields",
+      message: `Invalid cutoff for ${loan_type}. Allowed: ${cutoffRules[
+        loan_type
+      ].join(", ")}`,
     });
   }
 
@@ -44,9 +59,7 @@ router.post("/:employeeId/loans", async (req, res) => {
   const amortization = Number(monthly_amortization);
 
   if (isNaN(principal) || isNaN(amortization)) {
-    return res.status(400).json({
-      message: "Invalid loan amounts",
-    });
+    return res.status(400).json({ message: "Invalid loan amounts" });
   }
 
   const client = await pool.connect();
@@ -54,8 +67,7 @@ router.post("/:employeeId/loans", async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    /* ================= INSERT LOAN ================= */
-
+    /* 1️⃣ INSERT LOAN */
     const loanResult = await client.query(
       `
       INSERT INTO employee_loans (
@@ -76,15 +88,14 @@ router.post("/:employeeId/loans", async (req, res) => {
         loan_type,
         principal,
         amortization,
-        cutoff_behavior,
+        normalizedCutoff,
         start_date,
       ]
     );
 
     const loanId = loanResult.rows[0].id;
 
-    /* ================= AUDIT TRANSACTION ================= */
-
+    /* 2️⃣ AUDIT LOG */
     await client.query(
       `
       INSERT INTO transactions (
@@ -115,31 +126,178 @@ router.post("/:employeeId/loans", async (req, res) => {
 
     await client.query("COMMIT");
 
-    return res.status(201).json({
-      success: true,
+    res.status(201).json({
       message: "Loan added successfully",
       loan_id: loanId,
     });
-  } catch (error) {
+  } catch (err) {
     await client.query("ROLLBACK");
-    console.error("ADD LOAN ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to add loan",
-      error: error.message,
-    });
+    console.error("ADD LOAN ERROR:", err);
+    res.status(500).json({ message: "Failed to add loan" });
   } finally {
     client.release();
   }
 });
 
-/**
- * ======================================================
- * GET EMPLOYEE LOANS
- * GET /api/employees/:employeeId/loans
- * ======================================================
- */
+/* ======================================================
+   EDIT EMPLOYEE LOAN (AUDITED)
+====================================================== */
+router.put("/:employeeId/loans/:loanId", async (req, res) => {
+  const { employeeId, loanId } = req.params;
+  const actorId = req.headers["x-user-id"];
+
+  const { monthly_amortization, cutoff_behavior, start_date } = req.body;
+
+  if (!actorId) {
+    return res.status(401).json({ message: "Missing actor identity" });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const updateResult = await client.query(
+      `
+      UPDATE employee_loans
+      SET
+        monthly_amortization = COALESCE($1, monthly_amortization),
+        cutoff_behavior = COALESCE($2, cutoff_behavior),
+        start_date = COALESCE($3, start_date),
+        updated_at = NOW()
+      WHERE id = $4
+        AND is_active = true
+      RETURNING loan_type
+      `,
+      [monthly_amortization, cutoff_behavior, start_date, loanId]
+    );
+
+    if (updateResult.rowCount === 0) {
+      throw new Error("Loan not found or inactive");
+    }
+
+    const loanType = updateResult.rows[0].loan_type;
+
+    await client.query(
+      `
+      INSERT INTO transactions (
+        actor_id,
+        actor_role,
+        action,
+        entity,
+        entity_id,
+        status,
+        description
+      )
+      VALUES (
+        $1,
+        'USER',
+        'EDIT',
+        'EMPLOYEE_LOAN',
+        $2,
+        'COMPLETED',
+        $3
+      )
+      `,
+      [
+        actorId,
+        employeeId,
+        `Edited ${loanType} loan (Loan ID: ${loanId})`,
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    res.json({ message: "Loan updated successfully" });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("EDIT LOAN ERROR:", err);
+    res.status(500).json({ message: "Failed to edit loan" });
+  } finally {
+    client.release();
+  }
+});
+
+/* ======================================================
+   DELETE (DEACTIVATE) EMPLOYEE LOAN (AUDITED)
+====================================================== */
+router.delete("/:employeeId/loans/:loanId", async (req, res) => {
+  const { employeeId, loanId } = req.params;
+  const actorId = req.headers["x-user-id"];
+
+  if (!actorId) {
+    return res.status(401).json({ message: "Missing actor identity" });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const loanResult = await client.query(
+      `
+      UPDATE employee_loans
+      SET
+        is_active = false,
+        remaining_balance = 0,
+        end_date = NOW()
+      WHERE id = $1
+        AND employee_id = $2
+        AND is_active = true
+      RETURNING loan_type
+      `,
+      [loanId, employeeId]
+    );
+
+    if (loanResult.rowCount === 0) {
+      throw new Error("Loan not found or already inactive");
+    }
+
+    const loanType = loanResult.rows[0].loan_type;
+
+    await client.query(
+      `
+      INSERT INTO transactions (
+        actor_id,
+        actor_role,
+        action,
+        entity,
+        entity_id,
+        status,
+        description
+      )
+      VALUES (
+        $1,
+        'USER',
+        'DELETE',
+        'EMPLOYEE_LOAN',
+        $2,
+        'COMPLETED',
+        $3
+      )
+      `,
+      [
+        actorId,
+        employeeId,
+        `Deleted ${loanType} loan (Loan ID: ${loanId})`,
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    res.json({ message: "Loan deleted successfully" });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("DELETE LOAN ERROR:", err);
+    res.status(500).json({ message: "Failed to delete loan" });
+  } finally {
+    client.release();
+  }
+});
+
+/* ======================================================
+   GET ACTIVE EMPLOYEE LOANS
+====================================================== */
 router.get("/:employeeId/loans", async (req, res) => {
   const { employeeId } = req.params;
 
@@ -149,29 +307,23 @@ router.get("/:employeeId/loans", async (req, res) => {
       SELECT
         id,
         loan_type,
-        principal_amount,
         monthly_amortization,
         remaining_balance,
         cutoff_behavior,
         start_date,
-        is_active
+        end_date
       FROM employee_loans
       WHERE employee_id = $1
-      ORDER BY created_at ASC
+        AND is_active = true
+      ORDER BY start_date ASC
       `,
       [employeeId]
     );
 
-    return res.json({
-      success: true,
-      loans: result.rows,
-    });
-  } catch (error) {
-    console.error("GET LOANS ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch employee loans",
-    });
+    res.json({ loans: result.rows });
+  } catch (err) {
+    console.error("GET LOANS ERROR:", err);
+    res.status(500).json({ message: "Failed to load loans" });
   }
 });
 

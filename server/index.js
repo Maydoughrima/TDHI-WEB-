@@ -12,6 +12,11 @@ import employmentHistoryRoutes from "./api/employeeEmploymentHistory.js"
 import educationRoutes from "./api/employeeEducation.js"
 import employeeGovernmentDeductions from "./api/employeeGovernmentDeductions.js"
 import employeeLoans from "./api/employeeLoans.js"
+import payrollFilesRoutes from "./api/payrollFiles.js"
+import payrollSnapshots from "./api/payrollSnapshots.js"
+import payrollTransactionsRouter from "./api/payrollTransactions.js"
+import payrollPayslips from "./api/payrollPayslips.js"
+
 
 dotenv.config();
 
@@ -37,6 +42,10 @@ app.use("/api/employees", employmentHistoryRoutes);
 app.use("/api/employees", educationRoutes);
 app.use ("/api/employees",employeeGovernmentDeductions);
 app.use ("/api/employees",employeeLoans);
+app.use("/api/payroll-files", payrollFilesRoutes);
+app.use("/api", payrollSnapshots);
+app.use("/api/payroll-transactions", payrollTransactionsRouter)
+app.use("/api/payroll-files", payrollPayslips);
 
 //start server
 app.listen(PORT, () => {

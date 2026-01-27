@@ -1,27 +1,31 @@
 import { motion, AnimatePresence } from "framer-motion";
-import React, { useState } from "react";
+import { useState } from "react";
 
-export default function PayrollFormModal({ isOpen, onClose, onSubmit }) {
-  const [monthEnd, setMonthEnd] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [lastPay, setLastPay] = useState("No"); // default to No
+export default function GeneratePayrollModal({ isOpen, onClose, onSubmit }) {
+  const [periodStart, setPeriodStart] = useState("");
+  const [periodEnd, setPeriodEnd] = useState("");
+  const [lastPay, setLastPay] = useState(false);
+
+  const generatePaycode = () => {
+    const year = new Date().getFullYear();
+    const rand = Math.floor(100 + Math.random() * 900);
+    return `PR-${year}-${rand}`;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
     onSubmit({
-      monthEnd,
-      startDate,
-      endDate,
-      lastPay,
+      paycode: generatePaycode(),
+      period_start: periodStart,
+      period_end: periodEnd,
+      last_pay: lastPay,
     });
 
-    // Reset fields
-    setMonthEnd("");
-    setStartDate("");
-    setEndDate("");
-    setLastPay("No");
-
+    // Reset
+    setPeriodStart("");
+    setPeriodEnd("");
+    setLastPay(false);
     onClose();
   };
 
@@ -50,55 +54,50 @@ export default function PayrollFormModal({ isOpen, onClose, onSubmit }) {
               className="bg-white rounded-xl shadow-xl p-6 w-[90%] max-w-md"
             >
               <h2 className="text-xl font-bold mb-4 font-heading text-primary text-center">
-                Generate Payroll
+                Generate Payroll File
               </h2>
 
               <div className="flex flex-col gap-4">
+                {/* PERIOD START */}
                 <div>
-                  <label className="block mb-1 font-medium text-fontc">Month End</label>
-                  <input
-                    type="date"
-                    className="w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary p-2 text-fontc"
-                    value={monthEnd}
-                    onChange={(e) => setMonthEnd(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-medium text-fontc ">
-                    Starting Date
+                  <label className="block mb-1 font-medium text-fontc">
+                    Period Start
                   </label>
                   <input
                     type="date"
-                    className="w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary  p-2 text-fontc"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full border rounded-lg p-2"
+                    value={periodStart}
+                    onChange={(e) => setPeriodStart(e.target.value)}
                     required
                   />
                 </div>
 
+                {/* PERIOD END */}
                 <div>
-                  <label className="block mb-1 font-medium text-fontc">Ending Date</label>
+                  <label className="block mb-1 font-medium text-fontc">
+                    Period End
+                  </label>
                   <input
                     type="date"
-                    className="w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary  p-2 text-fontc"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full border rounded-lg p-2"
+                    value={periodEnd}
+                    onChange={(e) => setPeriodEnd(e.target.value)}
                     required
                   />
                 </div>
 
+                {/* LAST PAY */}
                 <div>
-                  <label className="block mb-1 font-medium text-fontc">Last Pay</label>
+                  <label className="block mb-1 font-medium text-fontc">
+                    Last Pay
+                  </label>
                   <select
-                    className="w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary p-2 text-fontc"
-                    value={lastPay}
-                    onChange={(e) => setLastPay(e.target.value)}
-                    required
+                    className="w-full border rounded-lg p-2"
+                    value={lastPay ? "yes" : "no"}
+                    onChange={(e) => setLastPay(e.target.value === "yes")}
                   >
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
                   </select>
                 </div>
               </div>
@@ -106,14 +105,14 @@ export default function PayrollFormModal({ isOpen, onClose, onSubmit }) {
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="submit"
-                  className="px-4 py-2 text-bg rounded-lg bg-accent text-white shadow-md"
+                  className="px-4 py-2 rounded-lg bg-accent text-white shadow-md"
                 >
-                  Process
-                </button>   
-                
+                  Generate
+                </button>
+
                 <button
                   type="button"
-                  className="px-4 py-2 text-fontc rounded-lg bg-gray-200 shadow-md"
+                  className="px-4 py-2 rounded-lg bg-gray-200"
                   onClick={onClose}
                 >
                   Cancel

@@ -8,6 +8,7 @@ import { fetchPayrollByEmployeeId } from "../../../../server/api/employeeAPI";
 export default function EmpPayrollInfo({
   isEditing,
   selectedEmployeeId,
+  payroll,
   onChangePayroll,
 }) {
   const [form, setForm] = useState({
@@ -175,6 +176,7 @@ export default function EmpPayrollInfo({
 
         <EmpDeductions employeeId={selectedEmployeeId}
         basicRate = {Number(form.basicRate || 0)}
+        isSecondCutoff={!!payroll?.lastPay}
         />
       </div>
     </div>

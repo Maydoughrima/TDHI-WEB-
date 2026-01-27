@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { IoClose } from "react-icons/io5";
@@ -22,6 +22,40 @@ export default function AddDeductionsModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  /* ================= AUTO CUTOFF RULES ================= */
+  useEffect(() => {
+    if (!form.loan_type) return;
+
+    // 🔒 HARD BUSINESS RULES
+    if (form.loan_type === "SSS_LOAN") {
+      setForm((prev) => ({
+        ...prev,
+        cutoff_behavior: "FIRST_CUTOFF_ONLY",
+      }));
+    }
+
+    if (form.loan_type === "PHILHEALTH_LOAN") {
+      setForm((prev) => ({
+        ...prev,
+        cutoff_behavior: "FIRST_CUTOFF_ONLY",
+      }));
+    }
+
+    if (form.loan_type === "PAGIBIG_LOAN") {
+      setForm((prev) => ({
+        ...prev,
+        cutoff_behavior: "SECOND_CUTOFF_ONLY",
+      }));
+    }
+
+    if (form.loan_type === "COMPANY_LOAN") {
+      setForm((prev) => ({
+        ...prev,
+        cutoff_behavior: "",
+      }));
+    }
+  }, [form.loan_type]);
 
   function handleChange(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -55,7 +89,7 @@ export default function AddDeductionsModal({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-user-id": user.id, // ✅ FIXED
+          "x-user-id": user.id,
         },
         body: JSON.stringify({
           loan_type: form.loan_type,
@@ -115,6 +149,7 @@ export default function AddDeductionsModal({
           >
             <option value="">Select loan</option>
             <option value="SSS_LOAN">SSS Loan</option>
+            <option value="PHILHEALTH_LOAN">PHILHEALTH Loan</option>
             <option value="PAGIBIG_LOAN">Pag-IBIG Loan</option>
             <option value="COMPANY_LOAN">Company Loan</option>
           </select>
@@ -139,12 +174,15 @@ export default function AddDeductionsModal({
 
           <select
             value={form.cutoff_behavior}
+            disabled={
+              form.loan_type === "SSS_LOAN" || form.loan_type === "PAGIBIG_LOAN"
+            }
             onChange={(e) => handleChange("cutoff_behavior", e.target.value)}
             className="p-2 border rounded-md"
           >
             <option value="">Select cutoff</option>
             <option value="FIRST_CUTOFF_ONLY">1st Cutoff Only</option>
-            <option value="BOTH_CUTOFFS">Both Cutoffs</option>
+            <option value="SECOND_CUTOFF_ONLY">2nd Cutoff Only</option>
           </select>
 
           <input

@@ -1,11 +1,21 @@
-import { useEffect, useState } from "react";
 import { LuClock } from "react-icons/lu";
 import { FaCheckCircle } from "react-icons/fa";
-import { payrolls as mockPayrolls } from "../../data/payroll";
+
+/**
+ * DATE FORMATTER
+ */
+const formatDate = (dateString) => {
+  if (!dateString) return "-";
+
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+};
 
 /**
  * COLUMN CONFIG
- * Status is DISPLAY-ONLY (icons)
  */
 const payrollColumns = [
   { label: "Paycode", key: "payCode", align: "left" },
@@ -18,18 +28,49 @@ const payrollColumns = [
   { label: "Status", key: "status", align: "center" },
 ];
 
-export default function PayrollTable({ onOpenPayroll }) {
-  const [rows, setRows] = useState([]);
+export default function PayrollTable({ data = [], loading, onOpenPayroll }) {
+  /**
+   * Normalize backend payroll file → table row
+   */
+  const rows = data.map((p) => {
+    const start = p.period_start ? new Date(p.period_start) : null;
+    const end = p.period_end ? new Date(p.period_end) : null;
 
-  // Mock fetch → backend API later
-  useEffect(() => {
-    setRows(mockPayrolls);
-  }, []);
+    const numOfDays =
+      start && end ? Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1 : "-";
+
+    return {
+      id: p.id,
+      payCode: p.paycode,
+      dateGenerated: p.date_generated,
+      monthEnd: p.last_pay ? "Yes" : "No",
+      periodStart: p.period_start,
+      periodEnd: p.period_end,
+      numOfDays,
+      lastPay: p.last_pay,
+      status: p.status,
+    };
+  });
+
+  const renderCellValue = (row, col) => {
+    if (
+      col.key === "dateGenerated" ||
+      col.key === "periodStart" ||
+      col.key === "periodEnd"
+    ) {
+      return formatDate(row[col.key]);
+    }
+
+    if (col.key === "lastPay") {
+      return row.lastPay ? "Yes" : "No";
+    }
+
+    return row[col.key] ?? "-";
+  };
 
   return (
     <div className="overflow-x-auto bg-white rounded-md shadow-sm">
       <table className="min-w-full divide-y divide-gray-200">
-        {/* TABLE HEADER */}
         <thead className="bg-gray-50">
           <tr>
             {payrollColumns.map((col) => (
@@ -45,21 +86,29 @@ export default function PayrollTable({ onOpenPayroll }) {
           </tr>
         </thead>
 
-        {/* TABLE BODY */}
         <tbody className="divide-y divide-gray-200">
-          {rows.length === 0 ? (
+          {loading ? (
             <tr>
               <td
                 colSpan={payrollColumns.length}
-                className="px-4 py-4 text-center text-gray-500"
+                className="px-4 py-6 text-center text-gray-500"
               >
-                No payrolls found.
+                Loading payroll files...
+              </td>
+            </tr>
+          ) : rows.length === 0 ? (
+            <tr>
+              <td
+                colSpan={payrollColumns.length}
+                className="px-4 py-6 text-center text-gray-500"
+              >
+                No payroll files found.
               </td>
             </tr>
           ) : (
             rows.map((row) => (
               <tr
-                key={row.payCode}
+                key={row.id}
                 onClick={() => onOpenPayroll(row)}
                 className="hover:bg-gray-50 cursor-pointer"
               >
@@ -67,28 +116,19 @@ export default function PayrollTable({ onOpenPayroll }) {
                   <td
                     key={col.key}
                     className={`px-4 py-2 text-sm text-fontc ${
-                      col.align === "center"
-                        ? "text-center"
-                        : "text-left"
+                      col.align === "center" ? "text-center" : "text-left"
                     }`}
                   >
-                    {/* STATUS ICON */}
                     {col.key === "status" ? (
                       <div className="flex justify-center items-center">
                         {row.status === "done" ? (
-                          <FaCheckCircle
-                            className="text-green-600 text-lg"
-                            title="Done"
-                          />
+                          <FaCheckCircle className="text-green-600 text-lg" />
                         ) : (
-                          <LuClock
-                            className="text-orange-500 text-lg"
-                            title="Ongoing"
-                          />
+                          <LuClock className="text-orange-500 text-lg" />
                         )}
                       </div>
                     ) : (
-                      row[col.key] ?? "-"
+                      renderCellValue(row, col)
                     )}
                   </td>
                 ))}

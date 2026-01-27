@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Button from "./Button";
 import AddDeductionsModal from "./AddDeductionsModal";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 /* ======================================================
    API
@@ -18,33 +19,50 @@ function formatLabel(text) {
   return text.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
+const round2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
+
 /* ======================================================
-   COMPUTATIONS (PURE)
+   GOVERNMENT COMPUTATIONS (MONTHLY-BASED)
 ====================================================== */
-function computeSSSPremium(basicRate) {
-  if (!basicRate || basicRate <= 0) return 0;
+function computeSSSPremium(monthlyBase) {
+  if (!monthlyBase || monthlyBase <= 0) return 0;
   const row = SSS_EMPLOYEE_TABLE.find(
-    (b) => basicRate >= b.min && basicRate <= b.max
+    (b) => monthlyBase >= b.min && monthlyBase <= b.max
   );
   return row ? row.employee : 0;
 }
 
-function computePhilHealthPremium(basicRate) {
-  if (!basicRate || basicRate <= 0) return 0;
+/**
+ * PhilHealth EMPLOYEE SHARE
+ * Rule:
+ * - Monthly salary
+ * - Floor: 10,000
+ * - Ceiling: 100,000
+ * - Rate: 2.5%
+ * - Employee pays 50%
+ */
+function computePhilHealthPremium(monthlyBase) {
+  if (!monthlyBase || monthlyBase <= 0) return 0;
+
   const FLOOR = 10000;
   const CEILING = 100000;
   const RATE = 0.025;
-  const base = Math.min(Math.max(basicRate, FLOOR), CEILING);
-  return Number((base * RATE).toFixed(2));
+
+  const base = Math.min(Math.max(monthlyBase, FLOOR), CEILING);
+  const totalPremium = base * RATE;
+
+  return Number((totalPremium / 2).toFixed(2)); // ✅ employee share
 }
 
-function computePagIbigPremium(basicRate) {
-  if (!basicRate || basicRate <= 0) return 0;
-  return Math.min(Math.min(basicRate, 5000) * 0.02, 100);
+function computePagIbigPremium(monthlyBase) {
+  if (!monthlyBase || monthlyBase <= 0) return 0;
+
+  // Employee share = 2% of monthly salary (NO CAP)
+  return round2(monthlyBase * 0.02);
 }
 
 /* ======================================================
-   SSS TABLE
+   SSS TABLE (EMPLOYEE SHARE / MONTHLY)
 ====================================================== */
 const SSS_EMPLOYEE_TABLE = [
   { min: 0, max: 5250, employee: 250 },
@@ -113,97 +131,120 @@ const SSS_EMPLOYEE_TABLE = [
 /* ======================================================
    COMPONENT
 ====================================================== */
-export default function EmpDeductions({ employeeId, basicRate }) {
+export default function EmpDeductions({
+  employeeId,
+  basicRate, // QUINCENA
+  isSecondCutoff = false,
+}) {
+  const monthlyBase = Number(basicRate || 0) * 2;
+
   const [loans, setLoans] = useState([]);
   const [loadingLoans, setLoadingLoans] = useState(false);
-  const [error, setError] = useState(null);
+
   const [openAddModal, setOpenAddModal] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
-  /* SYSTEM DEDUCTIONS (DERIVED) */
-  const systemDeductions = useMemo(() => {
-    if (!basicRate) return [];
-    return [
-      { type: "SSS_PREMIUM", amount: computeSSSPremium(basicRate) },
-      {
-        type: "PHILHEALTH_PREMIUM",
-        amount: computePhilHealthPremium(basicRate),
-      },
-      {
-        type: "PAGIBIG_CONTRIBUTION",
-        amount: computePagIbigPremium(basicRate),
-      },
-    ];
-  }, [basicRate]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [loanToDelete, setLoanToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
-  /* LOANS FETCH */
+  /* ================= SYSTEM DEDUCTIONS ================= */
+const systemDeductions = useMemo(() => {
+  if (!monthlyBase || monthlyBase <= 0) return [];
+
+  const deductions = [];
+
+  deductions.push(
+    { type: "SSS_PREMIUM", amount: computeSSSPremium(monthlyBase) },
+    {
+      type: "PHILHEALTH_PREMIUM",
+      amount: computePhilHealthPremium(monthlyBase),
+    },
+    {
+      type: "PAGIBIG_CONTRIBUTION",
+      amount: computePagIbigPremium(monthlyBase),
+    }
+  );
+
+  return deductions;
+}, [monthlyBase]);
+
+  /* ================= FETCH LOANS ================= */
   useEffect(() => {
     if (!employeeId) return;
 
     setLoadingLoans(true);
-    setError(null);
-
     fetchEmployeeLoans(employeeId)
-      .then((res) => {
-        setLoans(res.loans || []);
-        setLoadingLoans(false);
-      })
-      .catch(() => {
-        setError("Failed to load loans");
-        setLoadingLoans(false);
-      });
+      .then((res) => setLoans(res.loans || []))
+      .finally(() => setLoadingLoans(false));
   }, [employeeId, reloadKey]);
 
+  /* ================= DELETE LOAN ================= */
+  async function handleConfirmDelete() {
+    if (!loanToDelete) return;
+
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user?.id) return;
+
+    try {
+      setDeleting(true);
+
+      await fetch(`/api/employees/${employeeId}/loans/${loanToDelete.id}`, {
+        method: "DELETE",
+        headers: { "x-user-id": user.id },
+      });
+
+      setReloadKey((k) => k + 1);
+      setShowDeleteModal(false);
+      setLoanToDelete(null);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  /* ================= RENDER ================= */
   return (
     <div className="flex flex-col gap-2 bg-gray-100 p-4 w-full">
-      {/* HEADER */}
       <div className="bg-secondary p-2 rounded flex justify-between items-center">
         <h2 className="text-bg font-heading">Deductions</h2>
-        <Button
-          className="border border-white-500 shadow-none"
-          onClick={() => setOpenAddModal(true)}
-        >
-          Add Deduction
-        </Button>
+        <Button onClick={() => setOpenAddModal(true)}>Add Deduction</Button>
       </div>
 
-      {/* SCROLLABLE CONTENT */}
       <div className="flex flex-col gap-2 mt-2 max-h-72 overflow-y-auto pr-1">
-        <p className="text-xs font-semibold text-gray-600">
-          SYSTEM DEDUCTIONS
-        </p>
+        <p className="text-xs font-semibold text-gray-600">SYSTEM DEDUCTIONS</p>
 
         {systemDeductions.map((d) => (
-          <div
-            key={d.type}
-            className="flex justify-between bg-white p-2 rounded shadow-sm"
-          >
+          <div key={d.type} className="flex justify-between bg-white p-2 rounded">
             <span>{formatLabel(d.type)}</span>
             <span>₱{Number(d.amount).toLocaleString()}</span>
           </div>
         ))}
 
-        <p className="text-xs font-semibold text-gray-600 mt-3">
-          LOANS
-        </p>
+        <p className="text-xs font-semibold text-gray-600 mt-3">LOANS</p>
 
         {loadingLoans && (
           <p className="text-sm text-gray-500">Loading loans...</p>
         )}
-
         {!loadingLoans && loans.length === 0 && (
           <p className="text-sm text-gray-500">None</p>
         )}
 
         {loans.map((l) => (
-          <div
-            key={l.id}
-            className="flex justify-between bg-white p-2 rounded shadow-sm"
-          >
+          <div key={l.id} className="flex justify-between bg-white p-2 rounded">
             <span>{formatLabel(l.loan_type)}</span>
-            <span>
-              ₱{Number(l.monthly_amortization).toLocaleString()}
-            </span>
+            <div className="flex items-center gap-3">
+              <span>₱{Number(l.monthly_amortization).toLocaleString()}</span>
+              <Button
+                className="text-red-600 text-xs"
+                onClick={() => {
+                  setLoanToDelete(l);
+                  setShowDeleteModal(true);
+                }}
+              >
+                Delete
+              </Button>
+            </div>
           </div>
         ))}
       </div>
@@ -213,6 +254,15 @@ export default function EmpDeductions({ employeeId, basicRate }) {
         onClose={() => setOpenAddModal(false)}
         employeeId={employeeId}
         onSuccess={() => setReloadKey((k) => k + 1)}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        title="Delete Loan"
+        message={deleteError || "Are you sure you want to delete this loan?"}
+        loading={deleting}
+        onCancel={() => setShowDeleteModal(false)}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   );

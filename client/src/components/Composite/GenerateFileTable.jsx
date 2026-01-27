@@ -8,27 +8,18 @@ import PayrollTable from "./PayrollTable";
 import EmployeeTable from "./EmployeeTable";
 import TransactionsTable from "./TransactionsTable";
 
-export default function GenerateFileTable() {
+export default function GenerateFileTable({ data = [], loading, onRefreshPayrolls }) {
   /* =====================================================
      TAB STATE
-     -----------------------------------------------------
-     Controls which section is visible:
-     - "payroll"
-     - "employee"
-     - "transaction"
      ===================================================== */
   const [activeTab, setActiveTab] = useState("payroll");
 
   /* =====================================================
-     PAYROLL CONTEXT STATE (VERY IMPORTANT)
-     -----------------------------------------------------
-     - null  → user is NOT inside a payroll
-     - object → user IS inside a payroll
-     This state controls whether Employees tab is locked.
+     PAYROLL CONTEXT STATE
      ===================================================== */
   const [activePayroll, setActivePayroll] = useState(null);
-  // Example value:
-  // { payCode: "PR-2025-001", status: "ongoing" }
+  // Example:
+  // { id, payCode, status, periodStart, periodEnd }
 
   /* =====================================================
      DERIVED STATE
@@ -41,20 +32,14 @@ export default function GenerateFileTable() {
 
   /**
    * ENTER PAYROLL CONTEXT
-   * Called when user clicks a payroll row.
-   * - Sets active payroll
-   * - Automatically navigates to Employees tab
    */
   const handleOpenPayroll = (payroll) => {
     setActivePayroll(payroll);
-    setActiveTab("employee"); // 👈 AUTO PROCEED TO EMPLOYEES
+    setActiveTab("employee");
   };
 
   /**
    * EXIT PAYROLL CONTEXT
-   * Called when user goes back to Payroll File tab.
-   * - Clears active payroll
-   * - Locks Employees tab again
    */
   const handleExitPayroll = () => {
     setActivePayroll(null);
@@ -74,7 +59,7 @@ export default function GenerateFileTable() {
         <div className="top-cta flex flex-1 border-b border-gray-300 justify-between">
           {/* PAYROLL FILE TAB */}
           <button
-            onClick={handleExitPayroll} // 👈 EXIT PAYROLL CONTEXT HERE
+            onClick={handleExitPayroll}
             className={`flex flex-1 items-center justify-center gap-2 text-sm font-heading py-3
               ${activeTab === "payroll" ? "bg-accent text-bg" : "text-fontc"}
             `}
@@ -83,7 +68,7 @@ export default function GenerateFileTable() {
             Payroll File
           </button>
 
-          {/* EMPLOYEES TAB (LOCKED WHEN NOT IN PAYROLL) */}
+          {/* EMPLOYEES TAB */}
           <button
             disabled={isEmployeeLocked}
             onClick={() => setActiveTab("employee")}
@@ -101,7 +86,7 @@ export default function GenerateFileTable() {
             Employees
           </button>
 
-          {/* TRANSACTIONS TAB (ALWAYS AVAILABLE) */}
+          {/* TRANSACTIONS TAB */}
           <button
             onClick={() => setActiveTab("transaction")}
             className={`flex flex-1 items-center justify-center gap-2 text-sm font-heading py-3
@@ -113,7 +98,7 @@ export default function GenerateFileTable() {
           </button>
         </div>
 
-        {/* SEARCH BAR */}
+        {/* SEARCH BAR (UI ONLY FOR NOW) */}
         <div className="search flex flex-1 items-center justify-end gap-2 border border-gray-200 rounded-md px-3 py-2">
           <IoIosSearch className="text-gray-500 text-lg" />
           <input
@@ -128,20 +113,25 @@ export default function GenerateFileTable() {
           TAB CONTENT
          =============================== */}
       <div className="mt-4">
-        {/* PAYROLL LIST */}
+        {/* PAYROLL FILE LIST */}
         {activeTab === "payroll" && (
-          <PayrollTable onOpenPayroll={handleOpenPayroll} />
+          <PayrollTable
+            data={data}
+            loading={loading}
+            onOpenPayroll={handleOpenPayroll}
+          />
         )}
 
-        {/* EMPLOYEES (ONLY RENDERS IF INSIDE PAYROLL) */}
+        {/* EMPLOYEES TAB */}
         {activeTab === "employee" && activePayroll && (
           <EmployeeTable
             payroll={activePayroll}
             onExitPayroll={handleExitPayroll}
+            onRefreshPayrolls={onRefreshPayrolls}
           />
         )}
 
-        {/* TRANSACTIONS (OPTIONALLY SCOPED TO PAYROLL) */}
+        {/* TRANSACTIONS TAB */}
         {activeTab === "transaction" && (
           <TransactionsTable payroll={activePayroll} />
         )}
