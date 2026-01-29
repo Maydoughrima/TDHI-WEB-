@@ -4,10 +4,10 @@ import bcrypt from "bcrypt";
 
 async function createTestUser() {
   try {
-    const username = "testuser2";
-    const password = "password1234"; // plain text
-    const fullname = "John Doed";
-    const role = "user";
+    const username = "account1";
+    const password = "password12345"; // plain text
+    const fullname = "Nice One";
+    const role = "PAYROLL_CHECKER";
 
     // hash the password
     const hashedPassword = await bcrypt.hash(password, 10);

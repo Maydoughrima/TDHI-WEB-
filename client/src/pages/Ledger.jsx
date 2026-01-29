@@ -9,10 +9,19 @@ import Button from "../components/UI/Button";
 export default function Ledger() {
   // 🔑 Single source of truth
   const [filters, setFilters] = useState({
+    payrollFileId: "",   // ✅ REQUIRED for Ledger API
     departmentId: "",
     type: "deductions",
     paycode: "",
   });
+
+  // TEMPORARY: set payroll file manually (REMOVE once wired to real selector)
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      payrollFileId: "369d6182-fd02-49de-bd9e-f43bb36152c4", // 🔁 replace if needed
+    }));
+  }, []);
 
   useEffect(() => {
     console.log("FILTERS:", filters);
@@ -47,7 +56,9 @@ export default function Ledger() {
               <DeductionsTable filters={filters} />
             )}
 
-            {filters.type === "earnings" && <EarningsTable filters={filters} />}
+            {filters.type === "earnings" && (
+              <EarningsTable filters={filters} />
+            )}
           </div>
         </div>
       </div>

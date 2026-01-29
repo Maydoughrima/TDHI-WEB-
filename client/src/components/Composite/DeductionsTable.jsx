@@ -1,26 +1,23 @@
 import { useEffect, useState } from "react";
-import { getLedger } from "../../data/mockAPI/getLedger";
 
 const deductionColumns = [
-  { label: "Employee No.", key: "employeeNo", align: "left" },
-  { label: "Employee Name", key: "employeeName", align: "left", avatar: true },
-  { label: "Paycode", key: "paycode", align: "left" },
   { label: "Department", key: "department", align: "left" },
 
-  { label: "Late", key: "late" },
-  { label: "SSS", key: "sss" },
-  { label: "PHILHEALTH", key: "philhealth" },
-  { label: "HDMF_PREM", key: "hdmf_prem" },
-  { label: "HDMF_LOAN", key: "hdmf_loan" },
-  { label: "SSS_LOAN", key: "sss_loan" },
-  { label: "SSS_CAL", key: "sss_cal" },
-  { label: "HOSPT_ACT", key: "hospt_act" },
-  { label: "CANTEEN", key: "canteen" },
-  { label: "HSBC", key: "hsbc" },
-  { label: "COOP", key: "coop" },
-  { label: "LEAVE", key: "leave" },
-  { label: "OTHERS", key: "others" },
-  { label: "NETPAY", key: "netpay", bold: true },
+  { label: "Late", key: "LATE" },
+  { label: "SSS", key: "SSS" },
+  { label: "PHILHEALTH", key: "PHILHEALTH" },
+  { label: "HDMF_PREM", key: "HDMF_PREM" },
+  { label: "HDMF_LOAN", key: "HDMF_LOAN" },
+  { label: "SSS_LOAN", key: "SSS_LOAN" },
+  { label: "SSS_CAL", key: "SSS_CAL" },
+  { label: "Hospital Accounts", key: "HOSPT_ACT" },
+  { label: "CANTEEN", key: "CANTEEN" },
+  { label: "HSBC", key: "HSBC" },
+  { label: "COOP", key: "COOP" },
+  { label: "LEAVE", key: "LEAVE" },
+  { label: "OTHERS", key: "OTHERS" },
+
+  { label: "TOTAL", key: "TOTAL", bold: true },
 ];
 
 export default function DeductionsTable({ filters }) {
@@ -28,25 +25,59 @@ export default function DeductionsTable({ filters }) {
   const [loading, setLoading] = useState(false);
 
   const money = (v) =>
-    typeof v === "number" ? v.toFixed(2) : "0.00";
+    Number(v || 0).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
   useEffect(() => {
-    if (!filters.departmentId || !filters.paycode) return;
+    if (!filters.payrollFileId) {
+      setRows([]);
+      return;
+    }
 
-    setLoading(true);
-    getLedger({ ...filters, type: "deductions" })
-      .then(setRows)
-      .finally(() => setLoading(false));
-  }, [filters]);
+    const fetchLedger = async () => {
+      setLoading(true);
+
+      try {
+        const params = new URLSearchParams({
+          payroll_file_id: filters.payrollFileId,
+          entry_type: "DEDUCTION",
+        });
+
+        if (filters.departmentId) {
+          params.append("department", filters.departmentId);
+        }
+
+        const res = await fetch(`/api/ledger?${params.toString()}`);
+        const json = await res.json();
+
+        if (!json.success) {
+          setRows([]);
+          return;
+        }
+
+        // 🔑 Backend already returns correct table shape
+        setRows(json.data);
+      } catch (err) {
+        console.error("Ledger fetch failed:", err);
+        setRows([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLedger();
+  }, [filters.payrollFileId, filters.departmentId]);
 
   return (
     <div className="overflow-x-auto bg-white rounded-md shadow-sm max-w-full">
-      <table className="min-w-[1600px] divide-y divide-gray-200">
+      <table className="min-w-[1400px] divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
             {deductionColumns.map((col) => (
               <th
-                key={col.label}
+                key={col.key}
                 className={`px-4 py-2 text-sm font-semibold text-gray-700 ${
                   col.align === "left" ? "text-left" : "text-right"
                 }`}
@@ -60,19 +91,25 @@ export default function DeductionsTable({ filters }) {
         <tbody className="divide-y divide-gray-200">
           {loading ? (
             <tr>
-              <td colSpan={deductionColumns.length} className="px-4 py-4 text-center text-gray-500">
-                Loading deductions...
+              <td
+                colSpan={deductionColumns.length}
+                className="px-4 py-4 text-center text-gray-500"
+              >
+                Loading ledger…
               </td>
             </tr>
           ) : rows.length === 0 ? (
             <tr>
-              <td colSpan={deductionColumns.length} className="px-4 py-4 text-center text-gray-500">
-                No deduction records found.
+              <td
+                colSpan={deductionColumns.length}
+                className="px-4 py-4 text-center text-gray-500"
+              >
+                No ledger records found.
               </td>
             </tr>
           ) : (
             rows.map((row) => (
-              <tr key={row.id} className="hover:bg-gray-50">
+              <tr key={row.department} className="hover:bg-gray-50">
                 {deductionColumns.map((col) => (
                   <td
                     key={col.key}
@@ -80,20 +117,9 @@ export default function DeductionsTable({ filters }) {
                       col.align === "left" ? "text-left" : "text-right"
                     } ${col.bold ? "font-semibold" : ""}`}
                   >
-                    {col.avatar ? (
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={row.avatar}
-                          alt=""
-                          className="w-6 h-6 rounded-full"
-                        />
-                        {row[col.key]}
-                      </div>
-                    ) : col.align === "left" ? (
-                      row[col.key]
-                    ) : (
-                      money(row[col.key])
-                    )}
+                    {col.align === "left"
+                      ? row[col.key]
+                      : money(row[col.key])}
                   </td>
                 ))}
               </tr>

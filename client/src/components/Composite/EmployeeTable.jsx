@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import EmployeePayrollModal from "../UI/EmployeePayrollModal";
+import PayslipModal from "../Composite/PayslipModal";
 import WarningModal from "../UI/WarningModal";
 
 /**
@@ -11,6 +12,7 @@ const employeeColumns = [
   { label: "Department", key: "department" },
   { label: "Employee Status", key: "employeeStatus" },
   { label: "Payroll Status", key: "payroll_status" },
+  { label: "Action", key: "__action" },
 ];
 
 export default function EmployeeTable({
@@ -20,15 +22,23 @@ export default function EmployeeTable({
 }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // 🔹 Edit Payroll
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [open, setOpen] = useState(false);
+  const [openPayrollModal, setOpenPayrollModal] = useState(false);
+
+  // 🔹 View Payslip
+  const [selectedPayslip, setSelectedPayslip] = useState(null);
+  const [openPayslipModal, setOpenPayslipModal] = useState(false);
+
+  // 🔹 Finalize
   const [finalizing, setFinalizing] = useState(false);
   const [showFinalizeWarning, setShowFinalizeWarning] = useState(false);
   const [unprocessedEmployees, setUnprocessedEmployees] = useState([]);
 
   /* =====================================================
      FETCH EMPLOYEES
-     ===================================================== */
+  ===================================================== */
   useEffect(() => {
     fetchEmployees();
   }, []);
@@ -47,20 +57,52 @@ export default function EmployeeTable({
             name: e.full_name,
             department: e.department,
             employeeStatus: e.employment_status ?? "-",
-            payroll_status: "-",
-          })),
+            payroll_status: payroll.status,
+          }))
         );
       }
-    } catch (error) {
-      console.error("Failed to fetch employees:", error);
+    } catch (err) {
+      console.error("Fetch employees error:", err);
     } finally {
       setLoading(false);
     }
   };
 
   /* =====================================================
-     FORCE FINALIZE (NO CHECKS)
-     ===================================================== */
+     VIEW PAYSLIP (CORRECT SOURCE)
+  ===================================================== */
+  const handleViewPayslip = async (employeeId) => {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/payroll-files/${payroll.id}/payslips`
+      );
+      const json = await res.json();
+
+      if (!json.success) {
+        alert("Failed to load payslips");
+        return;
+      }
+
+      const payslip = json.data.find(
+        (p) => p.employee_id === employeeId
+      );
+
+      if (!payslip) {
+        alert("Payslip not found for this employee");
+        return;
+      }
+
+      setSelectedPayslip(payslip);
+      setOpenPayslipModal(true);
+    } catch (err) {
+      console.error("View payslip error:", err);
+      alert("Server error loading payslip");
+    }
+  };
+
+  /* =====================================================
+     FINALIZE PAYROLL
+  ===================================================== */
   const finalizePayrollForce = async () => {
     const user = JSON.parse(localStorage.getItem("user"));
     if (!user?.id) return alert("Unauthenticated");
@@ -74,9 +116,9 @@ export default function EmployeeTable({
           method: "PATCH",
           headers: {
             "x-user-id": user.id,
-            "x-force-finalize": "true", // 🔥 important
+            "x-force-finalize": "true",
           },
-        },
+        }
       );
 
       const json = await res.json();
@@ -89,52 +131,40 @@ export default function EmployeeTable({
       onExitPayroll();
     } catch (err) {
       console.error(err);
-      alert("Server error while finalizing payroll");
+      alert("Finalize error");
     } finally {
       setFinalizing(false);
     }
   };
 
-  /* =====================================================
-     CHECK BEFORE FINALIZE
-     ===================================================== */
   const handleFinalizePayroll = async () => {
     const user = JSON.parse(localStorage.getItem("user"));
-    if (!user?.id) {
-      alert("Unauthenticated");
-      return;
-    }
+    if (!user?.id) return alert("Unauthenticated");
 
     try {
       setFinalizing(true);
 
-      // 1️⃣ CHECK UNPROCESSED EMPLOYEES
       const res = await fetch(
         `http://localhost:5000/api/payroll-files/${payroll.id}/check-unprocessed`,
-        {
-          headers: { "x-user-id": user.id },
-        },
+        { headers: { "x-user-id": user.id } }
       );
 
       const json = await res.json();
-
       if (!json.success) {
-        alert(json.message || "Failed to validate payroll");
+        alert(json.message);
         return;
       }
 
-      // 2️⃣ IF THERE ARE UNPROCESSED → SHOW WARNING MODAL
       if (json.hasUnprocessed) {
         setUnprocessedEmployees(json.employees || []);
         setShowFinalizeWarning(true);
         return;
       }
 
-      // 3️⃣ NO ISSUES → FINALIZE DIRECTLY
       await finalizePayrollForce();
     } catch (err) {
       console.error(err);
-      alert("Server error while checking payroll");
+      alert("Validation error");
     } finally {
       setFinalizing(false);
     }
@@ -142,77 +172,77 @@ export default function EmployeeTable({
 
   /* =====================================================
      RENDER
-     ===================================================== */
+  ===================================================== */
   return (
     <>
-      {/* ===== FINALIZE BUTTON ===== */}
+      {/* FINALIZE BUTTON */}
       {payroll.status === "pending" && (
         <div className="flex justify-end mb-3">
           <button
             onClick={handleFinalizePayroll}
             disabled={finalizing}
-            className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-semibold hover:bg-red-700 disabled:opacity-50"
+            className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-semibold"
           >
             {finalizing ? "Finalizing..." : "Finalize Payroll"}
           </button>
         </div>
       )}
 
-      {/* ================= TABLE ================= */}
+      {/* TABLE */}
       <div className="overflow-x-auto bg-white rounded-md shadow-sm">
-        <table className="min-w-full table-fixed border-collapse">
-          {/* HEADER */}
+        <table className="min-w-full border-collapse">
           <thead className="bg-gray-50">
             <tr>
-              {employeeColumns.map((col) => (
+              {employeeColumns.map((c) => (
                 <th
-                  key={col.key}
-                  className="px-4 py-3 text-sm font-semibold text-gray-700 text-left align-middle whitespace-nowrap"
+                  key={c.key}
+                  className="px-4 py-3 text-sm font-semibold text-left"
                 >
-                  {col.label}
+                  {c.label}
                 </th>
               ))}
             </tr>
           </thead>
 
-          {/* BODY */}
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y">
             {loading ? (
               <tr>
-                <td
-                  colSpan={employeeColumns.length}
-                  className="px-4 py-6 text-center text-gray-500"
-                >
-                  Loading employees...
-                </td>
-              </tr>
-            ) : rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={employeeColumns.length}
-                  className="px-4 py-6 text-center text-gray-500"
-                >
-                  No employees found.
+                <td colSpan={employeeColumns.length} className="text-center py-6">
+                  Loading...
                 </td>
               </tr>
             ) : (
               rows.map((row) => (
-                <tr
-                  key={row.id}
-                  onClick={() => {
-                    setSelectedEmployee(row);
-                    setOpen(true);
-                  }}
-                  className="hover:bg-gray-50 cursor-pointer"
-                >
-                  {employeeColumns.map((col) => (
-                    <td
-                      key={col.key}
-                      className="px-4 py-3 text-sm text-fontc text-left align-middle whitespace-nowrap"
-                    >
-                      {row[col.key] ?? "-"}
-                    </td>
-                  ))}
+                <tr key={row.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">{row.employeeNo}</td>
+                  <td className="px-4 py-3">{row.name}</td>
+                  <td className="px-4 py-3">{row.department}</td>
+                  <td className="px-4 py-3">{row.employeeStatus}</td>
+                  <td className="px-4 py-3">{row.payroll_status}</td>
+
+                  {/* ACTION */}
+                  <td className="px-4 py-3 flex gap-2">
+                    {payroll.status === "pending" && (
+                      <button
+                        className="text-blue-600 text-sm"
+                        onClick={() => {
+                          setSelectedEmployee(row);
+                          setOpenPayrollModal(true);
+                        }}
+                      >
+                        Edit
+                      </button>
+                    )}
+
+                    {payroll.status === "done" && (
+                      <button
+                        className="text-green-600 text-sm"
+                        onClick={() => handleViewPayslip(row.id)}
+                      >
+                        View Payslip
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))
             )}
@@ -220,39 +250,45 @@ export default function EmployeeTable({
         </table>
       </div>
 
-      {/* ================= MODALS ================= */}
-      {open && selectedEmployee && (
+      {/* EDIT PAYROLL MODAL */}
+      {openPayrollModal && selectedEmployee && (
         <EmployeePayrollModal
-          isOpen={open}
-          onClose={() => {
-            setOpen(false);
-            setSelectedEmployee(null);
-          }}
+          isOpen={openPayrollModal}
           employee={selectedEmployee}
           payroll={payroll}
+          onClose={() => {
+            setOpenPayrollModal(false);
+            setSelectedEmployee(null);
+          }}
         />
       )}
 
+      {/* PAYSLIP MODAL */}
+      {openPayslipModal && selectedPayslip && (
+        <PayslipModal
+          isOpen={openPayslipModal}
+          payslip={selectedPayslip}
+          onClose={() => {
+            setOpenPayslipModal(false);
+            setSelectedPayslip(null);
+          }}
+        />
+      )}
+
+      {/* FINALIZE WARNING */}
       <WarningModal
         isOpen={showFinalizeWarning}
         title="Finalize Payroll"
         message={
           <>
             <p className="mb-2 font-semibold">
-              The following {unprocessedEmployees.length} employee(s) are not
-              yet processed:
+              Unprocessed employees:
             </p>
-
-            <ul className="mb-3 list-disc list-inside text-sm text-gray-700">
+            <ul className="list-disc list-inside text-sm">
               {unprocessedEmployees.map((e) => (
                 <li key={e.id}>{e.full_name}</li>
               ))}
             </ul>
-
-            <p className="text-sm text-red-600 font-semibold">
-              Do you still want to finalize this payroll? This action cannot be
-              undone.
-            </p>
           </>
         }
         confirmText="Finalize"

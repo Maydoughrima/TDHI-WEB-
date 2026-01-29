@@ -669,7 +669,7 @@ function computePhilHealth(monthlyBase) {
                         "Content-Type": "application/json",
                         "x-user-id": user.id,
                       },
-                      body: JSON.stringify(form),
+                      body: JSON.stringify({ ...form, activeCutoff }),
                     },
                   );
 

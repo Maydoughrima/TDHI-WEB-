@@ -2,17 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===============================
+   GLOBAL RESET
+   =============================== */
 * {
-  padding: 0;
   margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
+/* ===============================
+   LOGO
+   =============================== */
 .logo {
   height: 60px;
   width: 60px;
 }
 
+/* ===============================
+   ANIMATIONS
+   =============================== */
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
@@ -20,47 +29,76 @@
   }
   to {
     opacity: 1;
-    transform: translateX(0px);
+    transform: translateX(0);
   }
 }
 
 .animate-fadeSlideIn {
-  animation: fadeSlideIn ease-out forwards;
+  animation: fadeSlideIn 0.4s ease-out forwards;
 }
 
-/* ===============================
-   PRINT CONTRACT (FINAL)
-   =============================== */
+/* =========================================================
+   PRINT SYSTEM — SINGLE SOURCE OF TRUTH
+   ========================================================= */
 @media print {
 
-  /* RESET */
+  /* ===============================
+     1️⃣ HARD RESET (NO MERCY)
+     =============================== */
+  html,
+  body {
+    background: white !important;
+  }
+
   body * {
     visibility: hidden !important;
   }
 
-  /* ALLOW LEDGER + REPORTS */
+  /* ===============================
+     2️⃣ ALLOWED PRINT ROOTS
+     (ONLY THESE CAN PRINT)
+     =============================== */
   #ledger-print,
   #ledger-print *,
   #reports-print,
   #reports-print *,
-  .print-area,
-  .print-area * {
+  #transaction-print,
+  #transaction-print * {
     visibility: visible !important;
   }
 
+  /* ===============================
+     3️⃣ ROOT POSITIONING
+     =============================== */
   #ledger-print,
-  #reports-print {
+  #reports-print,
+  #transaction-print {
     position: absolute;
     inset: 0;
     width: 100%;
+    padding: 15mm;
+    background: white;
   }
 
-  /* REMOVE SCROLL */
-  .overflow-x-auto {
-    overflow: visible !important;
+  /* ===============================
+     4️⃣ KILL ALL UI
+     =============================== */
+  nav,
+  aside,
+  header,
+  footer,
+  button,
+  select,
+  input,
+  textarea,
+  img,
+  .no-print {
+    display: none !important;
   }
 
-  /* TABLE BASE */
+  /* ===============================
+     5️⃣ TABLE NORMALIZATION
+     =============================== */
   table {
     width: 100% !important;
     border-collapse: collapse;
@@ -69,47 +107,106 @@
 
   th,
   td {
-    font-size: 9px;
-    padding: 4px 6px;
-    white-space: nowrap;
+    border: 1px solid #000;
+    font-size: 11px;
+    padding: 6px 8px;
+    text-align: center;
     vertical-align: middle;
-    text-align: right;
   }
 
   th {
+    background: #f0f0f0;
     font-weight: 600;
   }
 
-  /* LEDGER-ONLY COLUMN FIXES */
-  #ledger-print th:nth-child(1),
-  #ledger-print td:nth-child(1),
-  #ledger-print th:nth-child(2),
-  #ledger-print td:nth-child(2),
-  #ledger-print th:nth-child(3),
-  #ledger-print td:nth-child(3),
-  #ledger-print th:nth-child(4),
-  #ledger-print td:nth-child(4) {
-    text-align: center;
-  }
-
-  #ledger-print th:last-child,
-  #ledger-print td:last-child {
-    font-weight: bold;
-  }
-
-  /* HIDE UI */
-  button,
-  select,
-  nav,
-  aside,
-  img,
-  .no-print {
-    display: none !important;
-  }
-
-  /* PAGE */
+  /* ===============================
+     6️⃣ PAGE CONFIG
+     =============================== */
   @page {
-    size: landscape;
+    size: portrait;
     margin: 10mm;
   }
+
+  .page-break {
+    page-break-after: always;
+  }
+}
+
+/* =========================================================
+   SHARED PRINT HELPERS
+   ========================================================= */
+.print-root {
+  font-family: Arial, sans-serif;
+  color: #000;
+}
+
+.section {
+  margin-top: 16px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* =========================================================
+   PAYSLIP / NET PAY
+   ========================================================= */
+.net {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* =========================================================
+   TRANSACTION PRINT (SPECIFIC)
+   ========================================================= */
+#transaction-print h1 {
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+}
+
+#transaction-print .subtitle {
+  font-size: 12px;
+  text-align: center;
+  margin-top: 4px;
+}
+
+#transaction-print .print-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+#transaction-print .print-meta span {
+  font-size: 11px;
+  color: #444;
+}
+
+#transaction-print .print-period {
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+
+#transaction-print .print-period span {
+  font-size: 11px;
+  color: #444;
+}
+
+#transaction-print .net-pay {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+#transaction-print .print-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 48px;
+}
+
+#transaction-print .line {
+  width: 180px;
+  border-bottom: 1px solid #000;
+  margin-top: 24px;
 }
