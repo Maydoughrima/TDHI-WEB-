@@ -5,7 +5,7 @@ const router = express.Router();
 
 /* ======================================================
    GET PAYROLL SUMMARY (READ-ONLY, ACCURATE)
-   Used for print / detailed view if needed
+   Used for print / detailed view
 ====================================================== */
 router.get("/:payrollFileId/summary", async (req, res) => {
   const { payrollFileId } = req.params;
@@ -23,7 +23,7 @@ router.get("/:payrollFileId/summary", async (req, res) => {
       FROM payroll_transactions pt
       JOIN payroll_files pf
         ON pf.id = pt.payroll_file_id
-      WHERE pf.id = $1
+      WHERE pt.payroll_file_id = $1
       `,
       [payrollFileId]
     );
@@ -66,8 +66,8 @@ router.get("/:payrollFileId/summary", async (req, res) => {
 });
 
 /* ======================================================
-   GET PAYROLL TRANSACTION HISTORY (ACCURATE TABLE DATA)
-   This powers the Transactions table directly
+   GET PAYROLL TRANSACTION HISTORY
+   (THIS FIXES YOUR EMPTY / ZERO DATA ISSUE)
 ====================================================== */
 router.get("/", async (req, res) => {
   try {
@@ -76,28 +76,27 @@ router.get("/", async (req, res) => {
       SELECT
         pt.id                     AS transaction_id,
         pt.transaction_code,
-        pf.id                     AS payroll_file_id,
+        pt.payroll_file_id,
         pf.paycode,
         pf.period_start,
         pf.period_end,
         pt.date_generated,
 
-        /* ✅ ACCURATE TOTALS FROM SNAPSHOTS */
-        COUNT(DISTINCT pes.employee_id)              AS employee_count,
-        COALESCE(SUM(pes.total_earnings), 0)         AS total_earnings,
-        COALESCE(SUM(pes.total_deductions), 0)       AS total_deductions,
-        COALESCE(SUM(pes.net_pay), 0)                AS total_net_pay
+        COUNT(DISTINCT pes.employee_id)        AS employee_count,
+        COALESCE(SUM(pes.total_earnings), 0)   AS total_earnings,
+        COALESCE(SUM(pes.total_deductions), 0) AS total_deductions,
+        COALESCE(SUM(pes.net_pay), 0)           AS total_net_pay
 
       FROM payroll_transactions pt
       JOIN payroll_files pf
         ON pf.id = pt.payroll_file_id
-      LEFT JOIN payroll_employee_snapshots pes
-        ON pes.payroll_file_id = pf.id
+      JOIN payroll_employee_snapshots pes
+        ON pes.payroll_file_id = pt.payroll_file_id
 
       GROUP BY
         pt.id,
         pt.transaction_code,
-        pf.id,
+        pt.payroll_file_id,
         pf.paycode,
         pf.period_start,
         pf.period_end,

@@ -7,33 +7,18 @@ const router = express.Router();
  * ======================================================
  * GET /api/ledger
  * PURPOSE:
- * - Ledger table data
  * - ONE row per department
- * - Columns = deduction codes
- * - FINALIZED payroll files only
- *
- * REQUIRED QUERY PARAMS:
- * - payroll_file_id (UUID)
- * - entry_type (EARNING | DEDUCTION)
- *
- * OPTIONAL QUERY PARAMS:
- * - department
+ * - FINALIZED payroll only
+ * - Source of truth: employee_payroll_deductions
  * ======================================================
  */
 router.get("/ledger", async (req, res) => {
-  const { payroll_file_id, entry_type, department } = req.query;
+  const { payroll_file_id, department } = req.query;
 
-  if (!payroll_file_id || !entry_type) {
+  if (!payroll_file_id) {
     return res.status(400).json({
       success: false,
-      message: "Missing payroll_file_id or entry_type",
-    });
-  }
-
-  if (!["EARNING", "DEDUCTION"].includes(entry_type)) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid entry_type",
+      message: "Missing payroll_file_id",
     });
   }
 
@@ -51,36 +36,40 @@ router.get("/ledger", async (req, res) => {
       SELECT
         e.department,
 
-        SUM(CASE WHEN pli.deduction_code = 'LATE' THEN pli.amount ELSE 0 END) AS "LATE",
-        SUM(CASE WHEN pli.deduction_code = 'SSS' THEN pli.amount ELSE 0 END) AS "SSS",
-        SUM(CASE WHEN pli.deduction_code = 'PHILHEALTH' THEN pli.amount ELSE 0 END) AS "PHILHEALTH",
-        SUM(CASE WHEN pli.deduction_code = 'HDMF_PREM' THEN pli.amount ELSE 0 END) AS "HDMF_PREM",
-        SUM(CASE WHEN pli.deduction_code = 'HDMF_LOAN' THEN pli.amount ELSE 0 END) AS "HDMF_LOAN",
-        SUM(CASE WHEN pli.deduction_code = 'SSS_LOAN' THEN pli.amount ELSE 0 END) AS "SSS_LOAN",
-        SUM(CASE WHEN pli.deduction_code = 'SSS_CAL' THEN pli.amount ELSE 0 END) AS "SSS_CAL",
-        SUM(CASE WHEN pli.deduction_code = 'HOSPT_ACT' THEN pli.amount ELSE 0 END) AS "HOSPT_ACT",
-        SUM(CASE WHEN pli.deduction_code = 'CANTEEN' THEN pli.amount ELSE 0 END) AS "CANTEEN",
-        SUM(CASE WHEN pli.deduction_code = 'HSBC' THEN pli.amount ELSE 0 END) AS "HSBC",
-        SUM(CASE WHEN pli.deduction_code = 'COOP' THEN pli.amount ELSE 0 END) AS "COOP",
-        SUM(CASE WHEN pli.deduction_code = 'LEAVE' THEN pli.amount ELSE 0 END) AS "LEAVE",
-        SUM(CASE WHEN pli.deduction_code = 'OTHERS' THEN pli.amount ELSE 0 END) AS "OTHERS",
+        /* GOVERNMENT */
+        SUM(CASE WHEN epd.deduction_type = 'SSS_PREMIUM' THEN epd.amount ELSE 0 END) AS "SSS",
+        SUM(CASE WHEN epd.deduction_type = 'PHILHEALTH_PREMIUM' THEN epd.amount ELSE 0 END) AS "PHILHEALTH",
+        SUM(CASE WHEN epd.deduction_type = 'PAGIBIG_PREMIUM' THEN epd.amount ELSE 0 END) AS "HDMF_PREM",
 
-        SUM(pli.amount) AS "TOTAL"
+        /* LOANS */
+        SUM(CASE WHEN epd.deduction_type = 'SSS_LOAN' THEN epd.amount ELSE 0 END) AS "SSS_LOAN",
+        SUM(CASE WHEN epd.deduction_type = 'PHILHEALTH_LOAN' THEN epd.amount ELSE 0 END) AS "PHILHEALTH_LOAN",
+        SUM(CASE WHEN epd.deduction_type = 'PAGIBIG_LOAN' THEN epd.amount ELSE 0 END) AS "HDMF_LOAN",
 
-      FROM payroll_line_items pli
-      JOIN employees e ON e.id = pli.employee_id
-      JOIN payroll_files pf ON pf.id = pli.payroll_file_id
+        /* COMPANY / MANUAL */
+        SUM(CASE WHEN epd.deduction_type = 'LATE_/_UNDERTIME' THEN epd.amount ELSE 0 END) AS "LATE",
+        SUM(CASE WHEN epd.deduction_type = 'HOSPITAL_ACCOUNTS' THEN epd.amount ELSE 0 END) AS "HOSPITAL_ACCOUNTS",
+        SUM(CASE WHEN epd.deduction_type = 'CANTEEN' THEN epd.amount ELSE 0 END) AS "CANTEEN",
+        SUM(CASE WHEN epd.deduction_type = 'HSBC' THEN epd.amount ELSE 0 END) AS "HSBC",
+        SUM(CASE WHEN epd.deduction_type = 'COOP' THEN epd.amount ELSE 0 END) AS "COOP",
+        SUM(CASE WHEN epd.deduction_type = 'LEAVE_W/O_PAY' THEN epd.amount ELSE 0 END) AS "LEAVE",
+        SUM(CASE WHEN epd.deduction_type = 'OTHER_DED_(NSO_/_ADJUSTMENT)' THEN epd.amount ELSE 0 END) AS "OTHERS",
+
+        /* TOTAL */
+        SUM(epd.amount) AS "TOTAL"
+
+      FROM employee_payroll_deductions epd
+      JOIN employees e ON e.id = epd.employee_id
+      JOIN payroll_files pf ON pf.id = epd.payroll_file_id
 
       WHERE pf.id = $1
         AND pf.status = 'done'
-        AND pli.entry_type = 'DEDUCTION'
-        AND pli.deduction_code IS NOT NULL
         ${deptFilter}
 
       GROUP BY e.department
       ORDER BY e.department
       `,
-      params,
+      params
     );
 
     res.json({ success: true, data: rows });
@@ -96,19 +85,12 @@ router.get("/ledger", async (req, res) => {
 /**
  * ======================================================
  * GET /api/ledger/payroll-files
- * PURPOSE:
- * - Populate Payroll File dropdown
- * - FINALIZED payroll files only
  * ======================================================
  */
-router.get("/ledger/payroll-files", async (req, res) => {
+router.get("/ledger/payroll-files", async (_req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT
-        id,
-        paycode,
-        period_start,
-        period_end
+      SELECT id, paycode, period_start, period_end
       FROM payroll_files
       WHERE status = 'done'
       ORDER BY created_at DESC
@@ -116,58 +98,37 @@ router.get("/ledger/payroll-files", async (req, res) => {
 
     res.json({ success: true, data: rows });
   } catch (err) {
-    console.error("Ledger payroll files fetch error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch payroll files",
-    });
+    res.status(500).json({ success: false });
   }
 });
 
 /**
  * ======================================================
  * GET /api/ledger/departments
- * PURPOSE:
- * - Populate Department dropdown
- * - Scoped to selected payroll file
  * ======================================================
  */
 router.get("/ledger/departments", async (req, res) => {
   const { payroll_file_id } = req.query;
 
   if (!payroll_file_id) {
-    return res.status(400).json({
-      success: false,
-      message: "Missing payroll_file_id",
-    });
+    return res.status(400).json({ success: false });
   }
 
-  try {
-    const { rows } = await pool.query(
-      `
-      SELECT DISTINCT e.department
-      FROM payroll_line_items pli
-      JOIN employees e ON e.id = pli.employee_id
-      JOIN payroll_files pf ON pf.id = pli.payroll_file_id
-      WHERE pf.id = $1
-        AND pf.status = 'done'
-        AND e.department IS NOT NULL
-      ORDER BY e.department
-      `,
-      [payroll_file_id],
-    );
+  const { rows } = await pool.query(
+    `
+    SELECT DISTINCT e.department
+    FROM employee_payroll_deductions epd
+    JOIN employees e ON e.id = epd.employee_id
+    JOIN payroll_files pf ON pf.id = epd.payroll_file_id
+    WHERE pf.id = $1
+      AND pf.status = 'done'
+      AND e.department IS NOT NULL
+    ORDER BY e.department
+    `,
+    [payroll_file_id]
+  );
 
-    res.json({
-      success: true,
-      data: rows.map((r) => r.department),
-    });
-  } catch (err) {
-    console.error("Ledger departments fetch error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch departments",
-    });
-  }
+  res.json({ success: true, data: rows.map(r => r.department) });
 });
 
 export default router;

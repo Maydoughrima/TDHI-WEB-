@@ -10,7 +10,7 @@ const deductionColumns = [
   { label: "HDMF_LOAN", key: "HDMF_LOAN" },
   { label: "SSS_LOAN", key: "SSS_LOAN" },
   { label: "SSS_CAL", key: "SSS_CAL" },
-  { label: "Hospital Accounts", key: "HOSPT_ACT" },
+  { label: "Hospital Accounts", key: "HOSPITAL_ACCOUNTS" },
   { label: "CANTEEN", key: "CANTEEN" },
   { label: "HSBC", key: "HSBC" },
   { label: "COOP", key: "COOP" },

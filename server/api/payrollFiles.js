@@ -156,10 +156,7 @@ router.patch("/:id/finalize", async (req, res) => {
   try {
     const actorId = req.headers["x-user-id"];
     if (!actorId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthenticated",
-      });
+      return res.status(401).json({ success: false, message: "Unauthenticated" });
     }
 
     const actorRole = "PAYROLL_CHECKER";
@@ -172,142 +169,144 @@ router.patch("/:id/finalize", async (req, res) => {
     ====================================================== */
     const { rows: pfRows } = await client.query(
       `SELECT * FROM payroll_files WHERE id = $1 FOR UPDATE`,
-      [payrollId],
+      [payrollId]
     );
 
     if (!pfRows.length) {
       await client.query("ROLLBACK");
-      return res.status(404).json({
-        success: false,
-        message: "Payroll not found",
-      });
+      return res.status(404).json({ success: false, message: "Payroll not found" });
     }
 
     const payrollFile = pfRows[0];
 
     if (payrollFile.status === "done") {
       await client.query("ROLLBACK");
-      return res.status(409).json({
-        success: false,
-        message: "Payroll already finalized",
-      });
+      return res.status(409).json({ success: false, message: "Payroll already finalized" });
     }
 
-    const isSecondCutoff = !!payrollFile.last_pay;
+    const isSecondCutoff = payrollFile.last_pay === true;
     const cutoffLabel = isSecondCutoff ? "SECOND" : "FIRST";
 
     /* ======================================================
-       🧹 IDEMPOTENCY — CLEAR SYSTEM DEDUCTIONS
+       🧹 HARD RESET AUTO DEDUCTIONS FOR THIS PAYROLL
     ====================================================== */
     await client.query(
       `
       DELETE FROM employee_payroll_deductions
       WHERE payroll_file_id = $1
-        AND cutoff = $2
-        AND source IN ('GOV','LOAN')
+        AND source IN ('GOV','LOAN','SYSTEM')
       `,
-      [payrollId, cutoffLabel],
+      [payrollId]
     );
+
+    /* ======================================================
+       🚫 FORCE REMOVE INVALID DEDUCTIONS ON LAST PAY
+    ====================================================== */
+    if (isSecondCutoff) {
+      await client.query(
+        `
+        DELETE FROM employee_payroll_deductions
+        WHERE payroll_file_id = $1
+          AND deduction_type IN (
+            'SSS_PREMIUM',
+            'SSS_LOAN',
+            'PHILHEALTH_PREMIUM',
+            'PHILHEALTH_LOAN'
+          )
+        `,
+        [payrollId]
+      );
+    }
 
     /* ======================================================
        2️⃣ FETCH EMPLOYEES
     ====================================================== */
-    const { rows: empRows } = await client.query(`
-      SELECT id FROM employees
-    `);
-
-    const totalEmployees = empRows.length;
-
-    let missingPayrollInfo = 0;
-    let appliedGovCount = 0;
-    let appliedLoanCount = 0;
+    const { rows: empRows } = await client.query(`SELECT id FROM employees`);
 
     /* ======================================================
        3️⃣ PROCESS EMPLOYEES
     ====================================================== */
     for (const emp of empRows) {
       const { rows: pRows } = await client.query(
-        `
-        SELECT basic_rate
-        FROM employee_payroll
-        WHERE employee_id = $1
-        `,
-        [emp.id],
+        `SELECT basic_rate FROM employee_payroll WHERE employee_id = $1`,
+        [emp.id]
       );
 
-      const payrollInfo = pRows[0];
-      if (!payrollInfo) {
-        missingPayrollInfo++;
-        continue;
-      }
+      if (!pRows.length) continue;
 
-      const quincena = Number(payrollInfo.basic_rate || 0);
+      const quincena = Number(pRows[0].basic_rate || 0);
       const monthlyBase = quincena * 2;
 
-      /* ---------- GOV DEDUCTIONS ---------- */
+      /* =========================
+         GOVERNMENT
+      ========================= */
       if (!isSecondCutoff) {
         const sss = computeSSSPremium(monthlyBase);
         const ph = computePhilHealthPremium(monthlyBase);
 
-        await insertDeductionRow(client, {
-          payrollFileId: payrollId,
-          employeeId: emp.id,
-          deductionType: "SSS_PREMIUM",
-          amount: sss,
-          sourceType: "GOV",
-          cutoff: cutoffLabel,
-        });
+        if (sss > 0) {
+          await insertDeductionRow(client, {
+            payrollFileId: payrollId,
+            employeeId: emp.id,
+            deductionType: "SSS_PREMIUM",
+            amount: sss,
+            sourceType: "GOV",
+            cutoff: cutoffLabel,
+          });
+        }
 
-        await insertDeductionRow(client, {
-          payrollFileId: payrollId,
-          employeeId: emp.id,
-          deductionType: "PHILHEALTH_PREMIUM",
-          amount: ph,
-          sourceType: "GOV",
-          cutoff: cutoffLabel,
-        });
-
-        if (sss > 0 || ph > 0) appliedGovCount++;
+        if (ph > 0) {
+          await insertDeductionRow(client, {
+            payrollFileId: payrollId,
+            employeeId: emp.id,
+            deductionType: "PHILHEALTH_PREMIUM",
+            amount: ph,
+            sourceType: "GOV",
+            cutoff: cutoffLabel,
+          });
+        }
       } else {
         const pi = computePagIbigPremium(monthlyBase);
 
-        await insertDeductionRow(client, {
-          payrollFileId: payrollId,
-          employeeId: emp.id,
-          deductionType: "PAGIBIG_CONTRIBUTION",
-          amount: pi,
-          sourceType: "GOV",
-          cutoff: cutoffLabel,
-        });
-
-        if (pi > 0) appliedGovCount++;
+        if (pi > 0) {
+          await insertDeductionRow(client, {
+            payrollFileId: payrollId,
+            employeeId: emp.id,
+            deductionType: "PAGIBIG_PREMIUM",
+            amount: pi,
+            sourceType: "GOV",
+            cutoff: cutoffLabel,
+          });
+        }
       }
 
-      /* ---------- LOANS ---------- */
+      /* =========================
+         LOANS
+      ========================= */
       const { rows: loanRows } = await client.query(
         `
-        SELECT id, loan_type, cutoff_behavior
+        SELECT id, loan_type
         FROM employee_loans
         WHERE employee_id = $1
           AND is_active = true
         `,
-        [emp.id],
+        [emp.id]
       );
 
       for (const loan of loanRows) {
-        const lt = loan.loan_type;
+        // 🚫 Skip invalid loans on last pay
+        if (
+          isSecondCutoff &&
+          (loan.loan_type === "SSS_LOAN" ||
+           loan.loan_type === "PHILHEALTH_LOAN")
+        ) {
+          continue;
+        }
 
-        const shouldApply =
-          ((lt === "SSS_LOAN" || lt === "PHILHEALTH_LOAN") &&
-            !isSecondCutoff) ||
-          (lt === "PAGIBIG_LOAN" && isSecondCutoff) ||
-          (lt === "COMPANY_LOAN" &&
-            ((loan.cutoff_behavior === "FIRST_CUTOFF_ONLY" &&
-              !isSecondCutoff) ||
-              (loan.cutoff_behavior === "SECOND_CUTOFF_ONLY" &&
-                isSecondCutoff)));
-
-        if (!shouldApply) continue;
+        // 🚫 Skip PAG-IBIG loan on FIRST cutoff
+        if (!isSecondCutoff && loan.loan_type === "PAGIBIG_LOAN") {
+          continue;
+        }
 
         const applied = await applyLoanDeduction({
           loanId: loan.id,
@@ -315,16 +314,46 @@ router.patch("/:id/finalize", async (req, res) => {
           actorId,
         });
 
+        if (applied.deducted_amount > 0) {
+          await insertDeductionRow(client, {
+            payrollFileId: payrollId,
+            employeeId: emp.id,
+            deductionType: loan.loan_type,
+            amount: applied.deducted_amount,
+            sourceType: "LOAN",
+            cutoff: cutoffLabel,
+          });
+        }
+      }
+    }
+
+    /* ======================================================
+       ✅ MANUAL PAYROLL SNAPSHOT DEDUCTIONS
+    ====================================================== */
+    const { rows: snapshotRows } = await client.query(
+      `
+      SELECT employee_id, manual_adjustments
+      FROM payroll_employee_snapshots
+      WHERE payroll_file_id = $1
+      `,
+      [payrollId]
+    );
+
+    for (const row of snapshotRows) {
+      const adjustments = row.manual_adjustments || [];
+
+      for (const adj of adjustments) {
+        if (adj.effect !== "DEDUCT") continue;
+        if (Number(adj.amount) <= 0) continue;
+
         await insertDeductionRow(client, {
           payrollFileId: payrollId,
-          employeeId: emp.id,
-          deductionType: lt,
-          amount: applied.deducted_amount,
-          sourceType: "LOAN",
+          employeeId: row.employee_id,
+          deductionType: adj.label.toUpperCase().replace(/\s+/g, "_"),
+          amount: Number(adj.amount),
+          sourceType: "SYSTEM",
           cutoff: cutoffLabel,
         });
-
-        if (applied.deducted_amount > 0) appliedLoanCount++;
       }
     }
 
@@ -337,77 +366,68 @@ router.patch("/:id/finalize", async (req, res) => {
       SET status = 'done', updated_at = NOW()
       WHERE id = $1
       `,
-      [payrollId],
+      [payrollId]
     );
 
     /* ======================================================
-       5️⃣ TRANSACTION HISTORY SNAPSHOT
+       5️⃣ TRANSACTION SUMMARY
     ====================================================== */
     const { rows: totals } = await client.query(
       `
       SELECT
-        COALESCE(SUM(ep.basic_rate), 0) * 2 AS total_earnings,
-        COALESCE(SUM(d.amount), 0)         AS total_deductions
-      FROM employee_payroll ep
-      LEFT JOIN employee_payroll_deductions d
-        ON d.employee_id = ep.employee_id
-       AND d.payroll_file_id = $1
+        COUNT(DISTINCT employee_id) AS employee_count,
+        COALESCE(SUM(amount) FILTER (WHERE entry_type = 'EARNING'), 0)   AS total_earnings,
+        COALESCE(SUM(amount) FILTER (WHERE entry_type = 'DEDUCTION'), 0) AS total_deductions
+      FROM payroll_line_items
+      WHERE payroll_file_id = $1
       `,
-      [payrollId],
+      [payrollId]
     );
 
     const { rows: codeRows } = await client.query(`
-  WITH next_counter AS (
-    INSERT INTO payroll_transaction_counters (txn_date, last_number)
-    VALUES (CURRENT_DATE, 1)
-    ON CONFLICT (txn_date)
-    DO UPDATE SET last_number = payroll_transaction_counters.last_number + 1
-    RETURNING txn_date, last_number
-  )
-  SELECT
-    'TXN-' ||
-    TO_CHAR(txn_date, 'YYYYMMDD') ||
-    '-' ||
-    LPAD(last_number::TEXT, 4, '0') AS transaction_code
-  FROM next_counter
-`);
-
-    const transactionCode = codeRows[0].transaction_code;
+      WITH next_counter AS (
+        INSERT INTO payroll_transaction_counters (txn_date, last_number)
+        VALUES (CURRENT_DATE, 1)
+        ON CONFLICT (txn_date)
+        DO UPDATE SET last_number = payroll_transaction_counters.last_number + 1
+        RETURNING txn_date, last_number
+      )
+      SELECT
+        'TXN-' || TO_CHAR(txn_date, 'YYYYMMDD') || '-' ||
+        LPAD(last_number::TEXT, 4, '0') AS transaction_code
+      FROM next_counter
+    `);
 
     const totalEarnings = Number(totals[0].total_earnings);
     const totalDeductions = Number(totals[0].total_deductions);
-    const totalNetPay = totalEarnings - totalDeductions;
 
     await client.query(
       `
-  INSERT INTO payroll_transactions (
-    payroll_file_id,
-    transaction_code,
-    period_start,
-    period_end,
-    date_generated,
-    employee_count,
-    total_earnings,
-    total_deductions,
-    total_net_pay
-  )
-  VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8)
-  `,
+      INSERT INTO payroll_transactions (
+        payroll_file_id,
+        transaction_code,
+        period_start,
+        period_end,
+        date_generated,
+        employee_count,
+        total_earnings,
+        total_deductions,
+        total_net_pay
+      )
+      VALUES ($1,$2,$3,$4,NOW(),$5,$6,$7,$8)
+      `,
       [
         payrollId,
-        transactionCode,
+        codeRows[0].transaction_code,
         payrollFile.period_start,
         payrollFile.period_end,
-        totalEmployees,
+        Number(totals[0].employee_count),
         totalEarnings,
         totalDeductions,
-        totalNetPay,
-      ],
+        totalEarnings - totalDeductions,
+      ]
     );
 
-    /* ======================================================
-       6️⃣ AUDIT LOG
-    ====================================================== */
     await transactionLog({
       actorId,
       actorRole,
@@ -415,25 +435,24 @@ router.patch("/:id/finalize", async (req, res) => {
       entity: "PAYROLL_FILE",
       entityId: payrollId,
       status: "COMPLETED",
-      description: `Finalized payroll. Cutoff=${cutoffLabel}. Employees=${totalEmployees}. MissingPayrollInfo=${missingPayrollInfo}. GovApplied=${appliedGovCount}. LoanApplied=${appliedLoanCount}.`,
+      description: `Finalized payroll. Cutoff=${cutoffLabel}`,
     });
 
     await client.query("COMMIT");
     res.json({ success: true });
+
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Finalize payroll error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Finalize failed",
-    });
+    res.status(500).json({ success: false, message: "Finalize failed" });
   } finally {
     client.release();
   }
 });
 
+
 /* ======================================================
-   Keep your other routes (POST /, GET /)
+   Keep other routes (POST /, GET /)
 ====================================================== */
 router.post("/", async (req, res) => {
   const client = await pool.connect();
