@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { getLedger } from "../../data/mockAPI/getLedger";
+import axios from "axios";
 
 const earningsColumns = [
-  { label: "Employee No.", key: "employeeNo", align: "left" },
-  { label: "Employee Name", key: "employeeName", align: "left", avatar: true },
   { label: "Department", key: "department", align: "left" },
   { label: "Basic Pay", key: "basicPay" },
   { label: "Overtime", key: "overtime" },
@@ -21,15 +19,33 @@ export default function EarningsTable({ filters }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const money = (v) =>
-    typeof v === "number" ? v.toFixed(2) : "0.00";
+  const money = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toFixed(2) : "0.00";
+  };
 
   useEffect(() => {
-    if (!filters.departmentId || !filters.paycode) return;
+    console.log("🔥 EarningsTable filters:", filters);
+
+    // ✅ only require payrollFileId
+    if (!filters?.payrollFileId) return;
 
     setLoading(true);
-    getLedger({ ...filters, type: "earnings" })
-      .then(setRows)
+
+    axios
+      .get("/api/ledger/earnings", {
+        params: {
+          payroll_file_id: filters.payrollFileId, // camel → snake
+          department: filters.departmentId || "ALL",
+        },
+      })
+      .then((res) => {
+        setRows(res.data?.data || []);
+      })
+      .catch((err) => {
+        console.error("Earnings ledger fetch error:", err);
+        setRows([]);
+      })
       .finally(() => setLoading(false));
   }, [filters]);
 
@@ -54,19 +70,25 @@ export default function EarningsTable({ filters }) {
         <tbody className="divide-y divide-gray-200">
           {loading ? (
             <tr>
-              <td colSpan={earningsColumns.length} className="px-4 py-4 text-center text-gray-500">
+              <td
+                colSpan={earningsColumns.length}
+                className="px-4 py-4 text-center text-gray-500"
+              >
                 Loading earnings...
               </td>
             </tr>
           ) : rows.length === 0 ? (
             <tr>
-              <td colSpan={earningsColumns.length} className="px-4 py-4 text-center text-gray-500">
+              <td
+                colSpan={earningsColumns.length}
+                className="px-4 py-4 text-center text-gray-500"
+              >
                 No earnings records found.
               </td>
             </tr>
           ) : (
-            rows.map((row) => (
-              <tr key={row.id} className="hover:bg-gray-50">
+            rows.map((row, idx) => (
+              <tr key={`${row.department}-${idx}`} className="hover:bg-gray-50">
                 {earningsColumns.map((col) => (
                   <td
                     key={col.key}
@@ -74,20 +96,7 @@ export default function EarningsTable({ filters }) {
                       col.align === "left" ? "text-left" : "text-right"
                     } ${col.bold ? "font-semibold" : ""}`}
                   >
-                    {col.avatar ? (
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={row.avatar}
-                          alt=""
-                          className="w-6 h-6 rounded-full"
-                        />
-                        {row[col.key]}
-                      </div>
-                    ) : col.align === "left" ? (
-                      row[col.key]
-                    ) : (
-                      money(row[col.key])
-                    )}
+                    {col.align === "left" ? row[col.key] : money(row[col.key])}
                   </td>
                 ))}
               </tr>

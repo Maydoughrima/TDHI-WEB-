@@ -39,7 +39,7 @@ router.get("/ledger", async (req, res) => {
         /* GOVERNMENT */
         SUM(CASE WHEN epd.deduction_type = 'SSS_PREMIUM' THEN epd.amount ELSE 0 END) AS "SSS",
         SUM(CASE WHEN epd.deduction_type = 'PHILHEALTH_PREMIUM' THEN epd.amount ELSE 0 END) AS "PHILHEALTH",
-        SUM(CASE WHEN epd.deduction_type = 'PAGIBIG_PREMIUM' THEN epd.amount ELSE 0 END) AS "HDMF_PREM",
+        SUM(CASE WHEN epd.deduction_type = 'PAGIBIG_PREM' THEN epd.amount ELSE 0 END) AS "HDMF_PREM",
 
         /* LOANS */
         SUM(CASE WHEN epd.deduction_type = 'SSS_LOAN' THEN epd.amount ELSE 0 END) AS "SSS_LOAN",
@@ -130,5 +130,87 @@ router.get("/ledger/departments", async (req, res) => {
 
   res.json({ success: true, data: rows.map(r => r.department) });
 });
+
+/**
+ * ======================================================
+ * GET /api/ledger/earnings
+ * PURPOSE:
+ * - ONE row per department
+ * - FINALIZED payroll only
+ * - Source of truth: payroll_transactions.total_earnings
+ * ======================================================
+ */
+router.get("/ledger/earnings", async (req, res) => {
+  const { payroll_file_id, department } = req.query;
+
+  if (!payroll_file_id) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing payroll_file_id",
+    });
+  }
+
+  try {
+    const params = [payroll_file_id];
+    let deptFilter = "";
+
+    if (department) {
+      params.push(department);
+      deptFilter = `AND e.department = $2`;
+    }
+
+    const { rows } = await pool.query(
+      `
+      SELECT
+        e.department,
+        SUM(pt.total_earnings) AS "TOTAL_EARNINGS"
+      FROM payroll_transactions pt
+      JOIN payroll_files pf
+        ON pf.id = pt.payroll_file_id
+      JOIN employees e
+        ON e.payroll_file_id = pf.id
+      WHERE pf.id = $1
+        AND pf.status = 'done'
+        ${deptFilter}
+      GROUP BY e.department
+      ORDER BY e.department
+      `,
+      params
+    );
+
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error("Earnings Ledger API error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch earnings ledger",
+    });
+  }
+});
+
+router.get("/ledger/earnings/departments", async (req, res) => {
+  const { payroll_file_id } = req.query;
+
+  if (!payroll_file_id) {
+    return res.status(400).json({ success: false });
+  }
+
+  const { rows } = await pool.query(
+    `
+    SELECT DISTINCT e.department
+    FROM payroll_transactions pt
+    JOIN payroll_files pf ON pf.id = pt.payroll_file_id
+    JOIN employees e ON e.payroll_file_id = pf.id
+    WHERE pf.id = $1
+      AND pf.status = 'done'
+      AND e.department IS NOT NULL
+    ORDER BY e.department
+    `,
+    [payroll_file_id]
+  );
+
+  res.json({ success: true, data: rows.map(r => r.department) });
+});
+
 
 export default router;

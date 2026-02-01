@@ -2,8 +2,11 @@ import express from "express";
 import { pool } from "../config/db.js";
 import { transactionLog } from "../services/transactionLog.js";
 import { applyLoanDeduction } from "../api/applyLoanDeduction.js";
+import { EARNING_TYPES } from "../api/earningType.js";
 
 const router = express.Router();
+
+
 
 /* ======================================================
    GOV COMPUTATIONS
@@ -224,7 +227,7 @@ router.patch("/:id/finalize", async (req, res) => {
     const { rows: empRows } = await client.query(`SELECT id FROM employees`);
 
     /* ======================================================
-       3️⃣ PROCESS EMPLOYEES
+       3️⃣ PROCESS EMPLOYEES (DEDUCTIONS ONLY)
     ====================================================== */
     for (const emp of empRows) {
       const { rows: pRows } = await client.query(
@@ -294,19 +297,13 @@ router.patch("/:id/finalize", async (req, res) => {
       );
 
       for (const loan of loanRows) {
-        // 🚫 Skip invalid loans on last pay
         if (
           isSecondCutoff &&
           (loan.loan_type === "SSS_LOAN" ||
            loan.loan_type === "PHILHEALTH_LOAN")
-        ) {
-          continue;
-        }
+        ) continue;
 
-        // 🚫 Skip PAG-IBIG loan on FIRST cutoff
-        if (!isSecondCutoff && loan.loan_type === "PAGIBIG_LOAN") {
-          continue;
-        }
+        if (!isSecondCutoff && loan.loan_type === "PAGIBIG_LOAN") continue;
 
         const applied = await applyLoanDeduction({
           loanId: loan.id,
@@ -328,7 +325,7 @@ router.patch("/:id/finalize", async (req, res) => {
     }
 
     /* ======================================================
-       ✅ MANUAL PAYROLL SNAPSHOT DEDUCTIONS
+       4️⃣ MANUAL SNAPSHOT DEDUCTIONS
     ====================================================== */
     const { rows: snapshotRows } = await client.query(
       `
@@ -358,7 +355,7 @@ router.patch("/:id/finalize", async (req, res) => {
     }
 
     /* ======================================================
-       4️⃣ FINALIZE PAYROLL FILE
+       5️⃣ FINALIZE PAYROLL FILE
     ====================================================== */
     await client.query(
       `
@@ -370,15 +367,16 @@ router.patch("/:id/finalize", async (req, res) => {
     );
 
     /* ======================================================
-       5️⃣ TRANSACTION SUMMARY
+       6️⃣ TRANSACTION TOTALS (FROM SNAPSHOTS — SOURCE OF TRUTH)
     ====================================================== */
     const { rows: totals } = await client.query(
       `
       SELECT
-        COUNT(DISTINCT employee_id) AS employee_count,
-        COALESCE(SUM(amount) FILTER (WHERE entry_type = 'EARNING'), 0)   AS total_earnings,
-        COALESCE(SUM(amount) FILTER (WHERE entry_type = 'DEDUCTION'), 0) AS total_deductions
-      FROM payroll_line_items
+        COUNT(*) AS employee_count,
+        COALESCE(SUM(total_earnings), 0)   AS total_earnings,
+        COALESCE(SUM(total_deductions), 0) AS total_deductions,
+        COALESCE(SUM(net_pay), 0)          AS total_net_pay
+      FROM payroll_employee_snapshots
       WHERE payroll_file_id = $1
       `,
       [payrollId]
@@ -397,9 +395,6 @@ router.patch("/:id/finalize", async (req, res) => {
         LPAD(last_number::TEXT, 4, '0') AS transaction_code
       FROM next_counter
     `);
-
-    const totalEarnings = Number(totals[0].total_earnings);
-    const totalDeductions = Number(totals[0].total_deductions);
 
     await client.query(
       `
@@ -422,9 +417,9 @@ router.patch("/:id/finalize", async (req, res) => {
         payrollFile.period_start,
         payrollFile.period_end,
         Number(totals[0].employee_count),
-        totalEarnings,
-        totalDeductions,
-        totalEarnings - totalDeductions,
+        Number(totals[0].total_earnings),
+        Number(totals[0].total_deductions),
+        Number(totals[0].total_net_pay),
       ]
     );
 
@@ -449,6 +444,7 @@ router.patch("/:id/finalize", async (req, res) => {
     client.release();
   }
 });
+
 
 
 /* ======================================================
@@ -829,5 +825,30 @@ router.get("/:payrollFileId/check-unprocessed", async (req, res) => {
     });
   }
 });
+
+const insertEarning = async (client, {
+  payroll_file_id,
+  employee_id,
+  earning_type,
+  amount,
+}) => {
+  if (!amount || Number(amount) === 0) return;
+
+  await client.query(
+    `
+    INSERT INTO employee_payroll_earnings (
+      payroll_file_id,
+      employee_id,
+      earning_type,
+      amount
+    )
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT (payroll_file_id, employee_id, earning_type)
+    DO UPDATE SET amount = EXCLUDED.amount
+    `,
+    [payroll_file_id, employee_id, earning_type, amount]
+  );
+};
+
 
 export default router;

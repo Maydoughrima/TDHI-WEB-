@@ -19,6 +19,7 @@ import payrollPayslips from "./api/payrollPayslips.js"
 import payrollemployeePayslips from "./api/payrollEmployeePayslip.js"
 import payrollFileEmployeesRoutes from "./api/payrollFileEmployees.js";
 import ledgerRoutes from "./api/ledger.js"
+import ledgerEarnings from "./api/ledgerEarnings.js";
 
 dotenv.config();
 
@@ -50,7 +51,9 @@ app.use("/api/payroll-transactions", payrollTransactionsRouter)
 app.use("/api/payroll-files", payrollPayslips);
 app.use("/api/payroll-files", payrollemployeePayslips);
 app.use("/api/payroll-files", payrollFileEmployeesRoutes);
+app.use("/api", ledgerEarnings);
 app.use("/api", ledgerRoutes);
+
 
 //start server
 app.listen(PORT, () => {

@@ -56,7 +56,6 @@
 
   /* ===============================
      2️⃣ ALLOWED PRINT ROOTS
-     (ONLY THESE CAN PRINT)
      =============================== */
   #ledger-print,
   #ledger-print *,
@@ -130,6 +129,72 @@
   .page-break {
     page-break-after: always;
   }
+
+  /* ===============================
+     7️⃣ HEADER FIX (CENTER + SPACING)
+     =============================== */
+  .print-header {
+    text-align: center;
+    margin-bottom: 14px;
+  }
+
+  .print-header h1 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .print-header .subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  /* ===============================
+     8️⃣ META SPACING FIX
+     =============================== */
+  .print-meta,
+  .print-period {
+    margin-top: 10px;
+    margin-bottom: 12px;
+    font-size: 11px;
+  }
+
+  .print-meta div {
+    margin-bottom: 6px;
+  }
+
+  .print-meta strong,
+  .print-period strong {
+    margin-left: 6px;
+    font-weight: 600;
+  }
+
+  /* ===============================
+     9️⃣ PREPARED / APPROVED FIX
+     =============================== */
+  .print-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 48px;
+    padding: 0 40px;
+  }
+
+  .print-footer div {
+    width: 220px;
+    text-align: center;
+  }
+
+  .print-footer span {
+    font-size: 11px;
+    display: block;
+    margin-bottom: 28px;
+  }
+
+  .print-footer .line {
+    width: 100%;
+    border-bottom: 1px solid #000;
+  }
 }
 
 /* =========================================================
@@ -197,16 +262,4 @@
 #transaction-print .net-pay {
   font-weight: bold;
   font-size: 14px;
-}
-
-#transaction-print .print-footer {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 48px;
-}
-
-#transaction-print .line {
-  width: 180px;
-  border-bottom: 1px solid #000;
-  margin-top: 24px;
 }
