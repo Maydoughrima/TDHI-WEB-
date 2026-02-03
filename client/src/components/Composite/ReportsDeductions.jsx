@@ -1,40 +1,65 @@
 import PrintableReport from "../UI/PrintableReport";
 import { useEffect, useState } from "react";
-import { getReportsDeductions } from "../../data/mockAPI/getReportsDeductions";
 
 export default function ReportsDeductions({ filters }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [deductionType, setDeductionType] = useState("");
+  const [paycode, setPaycode] = useState(""); // ✅ ADD
 
   useEffect(() => {
-    if (!filters.paycode || !deductionType) return;
+    if (!filters.payrollFileId || !filters.deductionType) {
+      setRows([]);
+      setPaycode(""); // ✅ RESET
+      return;
+    }
 
-    setLoading(true);
-    getReportsDeductions({ paycode: filters.paycode, deductionType })
-      .then(setRows)
-      .finally(() => setLoading(false));
-  }, [filters.paycode, deductionType]);
+    const fetchReport = async () => {
+      setLoading(true);
+
+      try {
+        const params = new URLSearchParams({
+          payroll_file_id: filters.payrollFileId,
+          deduction_type: filters.deductionType,
+        });
+
+        const res = await fetch(`/api/reports/deductions?${params.toString()}`);
+        const json = await res.json();
+
+        if (!json.success) {
+          setRows([]);
+          setPaycode("");
+          return;
+        }
+
+        const list = Array.isArray(json.data) ? json.data : [];
+        setRows(list);
+
+        // ✅ paycode now comes from backend (same for every row)
+        setPaycode(list[0]?.paycode || "");
+      } catch (err) {
+        console.error("Failed to fetch deductions report:", err);
+        setRows([]);
+        setPaycode("");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReport();
+  }, [filters.payrollFileId, filters.deductionType]);
 
   const money = (v) =>
-    typeof v === "number" ? v.toFixed(2) : "0.00";
+    Number(v || 0).toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
-  const total = rows.reduce((s, r) => s + (r.amount || 0), 0);
+  const total = rows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="no-print flex justify-between items-center">
-        <select
-          className="border rounded-lg p-2 text-sm"
-          value={deductionType}
-          onChange={(e) => setDeductionType(e.target.value)}
-        >
-          <option value="">Select Deduction</option>
-          <option value="SSS - Premium">SSS - Premium</option>
-          <option value="PhilHealth">PhilHealth</option>
-          <option value="HDMF - Premium">HDMF - Premium</option>
-        </select>
-
+      {/* ACTION BAR */}
+      <div className="no-print flex justify-end">
         <button
           onClick={() => window.print()}
           className="bg-secondary text-white px-4 py-2 rounded-md text-sm"
@@ -45,7 +70,7 @@ export default function ReportsDeductions({ filters }) {
 
       <PrintableReport
         title="DEDUCTIONS REPORT"
-        subtitle={`Paycode: ${filters.paycode} | ${deductionType}`}
+        subtitle={`Paycode: ${paycode || "-"} | ${filters.deductionType || "-"}`}
       >
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -71,14 +96,12 @@ export default function ReportsDeductions({ filters }) {
                 </td>
               </tr>
             ) : (
-              rows.map((r) => (
-                <tr key={r.id} className="border-b">
-                  <td className="py-2">#{r.employeeNo}</td>
-                  <td className="py-2">{r.employeeName}</td>
+              rows.map((r, i) => (
+                <tr key={i} className="border-b">
+                  <td className="py-2">{r.employee_no}</td>
+                  <td className="py-2">{r.employee_name}</td>
                   <td className="py-2">{r.department}</td>
-                  <td className="py-2 text-right">
-                    ₱{money(r.amount)}
-                  </td>
+                  <td className="py-2 text-right">₱{money(r.amount)}</td>
                 </tr>
               ))
             )}
@@ -90,9 +113,7 @@ export default function ReportsDeductions({ filters }) {
                 <td colSpan={3} className="py-2 text-right">
                   TOTAL
                 </td>
-                <td className="py-2 text-right">
-                  ₱{money(total)}
-                </td>
+                <td className="py-2 text-right">₱{money(total)}</td>
               </tr>
             </tfoot>
           )}

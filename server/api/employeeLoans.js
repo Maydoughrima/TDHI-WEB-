@@ -26,25 +26,38 @@ router.post("/:employeeId/loans", async (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
-  /* ================= HR-SAFE CUTOFF VALIDATION ================= */
+  /* ================= CUTOFF CONSTANTS ================= */
   const FIRST = "FIRST_CUTOFF_ONLY";
   const SECOND = "SECOND_CUTOFF_ONLY";
 
-  // normalize legacy value
+  /* ================= NORMALIZE LEGACY ================= */
   let normalizedCutoff = cutoff_behavior;
   if (cutoff_behavior === "BOTH_CUTOFFS") {
     normalizedCutoff = SECOND;
   }
 
+  /* ================= OFFICIAL LOAN RULES ================= */
   const cutoffRules = {
+    // SSS
     SSS_LOAN: [FIRST],
+    SSS_SALARY_LOAN: [FIRST],
+    SSS_CALAMITY_LOAN: [FIRST],
+
+    // PHILHEALTH
     PHILHEALTH_LOAN: [FIRST],
+
+    // PAG-IBIG
     PAGIBIG_LOAN: [SECOND],
+    PAGIBIG_CALAMITY_LOAN: [SECOND],
+
+    // COMPANY
     COMPANY_LOAN: [FIRST, SECOND],
   };
 
   if (!cutoffRules[loan_type]) {
-    return res.status(400).json({ message: "Invalid loan type" });
+    return res.status(400).json({
+      message: `Invalid loan type: ${loan_type}`,
+    });
   }
 
   if (!cutoffRules[loan_type].includes(normalizedCutoff)) {
@@ -67,7 +80,7 @@ router.post("/:employeeId/loans", async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    /* 1️⃣ INSERT LOAN */
+    /* ================= INSERT LOAN ================= */
     const loanResult = await client.query(
       `
       INSERT INTO employee_loans (
@@ -95,7 +108,7 @@ router.post("/:employeeId/loans", async (req, res) => {
 
     const loanId = loanResult.rows[0].id;
 
-    /* 2️⃣ AUDIT LOG */
+    /* ================= AUDIT LOG ================= */
     await client.query(
       `
       INSERT INTO transactions (
@@ -120,7 +133,7 @@ router.post("/:employeeId/loans", async (req, res) => {
       [
         actorId,
         employeeId,
-        `Added ${loan_type} loan (Loan ID: ${loanId})`,
+        `Added ${loan_type} (Loan ID: ${loanId})`,
       ]
     );
 
@@ -202,7 +215,7 @@ router.put("/:employeeId/loans/:loanId", async (req, res) => {
       [
         actorId,
         employeeId,
-        `Edited ${loanType} loan (Loan ID: ${loanId})`,
+        `Edited ${loanType} (Loan ID: ${loanId})`,
       ]
     );
 
@@ -279,7 +292,7 @@ router.delete("/:employeeId/loans/:loanId", async (req, res) => {
       [
         actorId,
         employeeId,
-        `Deleted ${loanType} loan (Loan ID: ${loanId})`,
+        `Deleted ${loanType} (Loan ID: ${loanId})`,
       ]
     );
 

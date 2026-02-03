@@ -22,6 +22,7 @@ const DEDUCT_ADJUSTMENTS = [
   "Tax Compensation",
   "Canteen",
   "Coop",
+  "HSBC",
   "Leave w/o Pay",
   "Other Ded (NSO / Adjustment)",
 ];
@@ -394,7 +395,6 @@ function computePhilHealth(monthlyBase) {
       .finally(() => setDeductionsLoaded(true));
   }, [isOpen, employee?.id, payroll?.id]);
 
-  /* ================= FETCH LOANS (PREVIEW) ================= */
   /* ================= FETCH LOANS (PREVIEW) ================= */
   useEffect(() => {
     if (!isOpen || !employee?.id) return;

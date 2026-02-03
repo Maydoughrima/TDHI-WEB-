@@ -4,11 +4,11 @@ import { FiActivity } from "react-icons/fi";
  * TransactionSummaryCard
  *
  * Backend-ready props:
- * - total: total number of transactions
- * - created: created records
- * - edited: edited records
- * - approved: approved actions
- * - lastActivity: string or timestamp
+ * - total
+ * - created
+ * - edited
+ * - approved
+ * - lastActivity (formatted string)
  */
 export default function TransactionHistorySummary({
   total = 0,

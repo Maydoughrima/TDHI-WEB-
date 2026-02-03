@@ -7,7 +7,12 @@ export default function PayrollCostOverview({
   deductions = 0,
   dateLabel = "From 1–13 December, 2025",
   rangeLabel = "Last Payroll",
+
+  // 🔽 NEW PROPS
+  payrollOptions = [],
+  isDropdownOpen = false,
   onRangeClick,
+  onSelectPayroll,
 }) {
   const data = [
     { name: "Expenses", value: expenses },
@@ -19,10 +24,10 @@ export default function PayrollCostOverview({
   const percent = total > 0 ? Math.round((expenses / total) * 100) : 0;
 
   return (
-    <div className="bg-bg rounded-md shadow-md px-6 py-5 h-full flex flex-col">
+    <div className="relative bg-bg rounded-md shadow-md px-6 py-5 h-full flex flex-col">
 
-      {/* HEADER */}
-      <div className="flex items-start justify-between mb-6">
+      {/* ================= HEADER ================= */}
+      <div className="flex items-start justify-between mb-6 relative">
         <div>
           <p className="font-heading text-lg font-medium text-primary">
             Payroll Cost Overview
@@ -30,16 +35,34 @@ export default function PayrollCostOverview({
           <p className="text-sm text-gray-500 mt-1">{dateLabel}</p>
         </div>
 
-        <Button
-          onClick={onRangeClick}
-          className="flex items-center gap-1 bg-secondary text-bg px-4 py-2 rounded-xl shadow-sm"
-        >
-          {rangeLabel}
-          <RiArrowDropDownLine className="text-xl" />
-        </Button>
+        {/* BUTTON + DROPDOWN */}
+        <div className="relative">
+          <Button
+            onClick={onRangeClick}
+            className="flex items-center gap-1 bg-secondary text-bg px-4 py-2 rounded-xl shadow-sm"
+          >
+            {rangeLabel}
+            <RiArrowDropDownLine className="text-xl" />
+          </Button>
+
+          {/* DROPDOWN LIST */}
+          {isDropdownOpen && payrollOptions.length > 0 && (
+            <div className="absolute right-0 mt-2 w-56 bg-bg border border-gray-200 rounded-md shadow-lg z-50">
+              {payrollOptions.map((payroll) => (
+                <button
+                  key={payroll.payroll_file_id}
+                  onClick={() => onSelectPayroll(payroll)}
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-gray-100"
+                >
+                  {payroll.paycode}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* CENTERED CONTENT */}
+      {/* ================= CENTER CONTENT ================= */}
       <div className="flex-1 flex items-center justify-center">
         <div className="flex items-center gap-14">
 
@@ -73,11 +96,10 @@ export default function PayrollCostOverview({
 
           {/* DETAILS */}
           <div className="flex flex-col gap-8">
-
             <div className="flex items-center gap-4">
               <div className="w-1.5 h-10 bg-primary rounded" />
               <div>
-                <p className="text-sm text-gray-500">Expenses</p>
+                <p className="text-sm text-gray-500">Earnings</p>
                 <p className="text-xl font-medium text-primary">
                   {expenses.toLocaleString()}
                 </p>
@@ -93,8 +115,8 @@ export default function PayrollCostOverview({
                 </p>
               </div>
             </div>
-
           </div>
+
         </div>
       </div>
     </div>

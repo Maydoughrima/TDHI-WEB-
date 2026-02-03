@@ -11,29 +11,51 @@ export default function EmpImage({
   const [employee, setEmployee] = useState(null);
   const [preview, setPreview] = useState(null);
 
-  /* ================= FETCH EMPLOYEE (IMAGE + DATE HIRED) ================= */
-  useEffect(() => {
+  /* ================= FETCH EMPLOYEE ================= */
+  const loadEmployee = async () => {
     if (!employeeId) {
       setEmployee(null);
       return;
     }
 
-    const loadEmployee = async () => {
-      try {
-        const res = await fetch(
-          `http://localhost:5000/api/employees/${employeeId}`
-        );
-        const json = await res.json();
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/employees/${employeeId}`
+      );
+      const json = await res.json();
 
-        if (json?.success) {
-          setEmployee(json.data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch employee data:", err);
+      if (json?.success) {
+        setEmployee(json.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch employee data:", err);
+    }
+  };
+
+  /* ================= INITIAL FETCH ================= */
+  useEffect(() => {
+    loadEmployee();
+  }, [employeeId]);
+
+  /* ================= LIVE UPDATE LISTENER ================= */
+  useEffect(() => {
+    const handleEmployeeImageUpdate = (e) => {
+      if (e?.detail?.employeeId === employeeId) {
+        loadEmployee();
       }
     };
 
-    loadEmployee();
+    window.addEventListener(
+      "employee-image-updated",
+      handleEmployeeImageUpdate
+    );
+
+    return () => {
+      window.removeEventListener(
+        "employee-image-updated",
+        handleEmployeeImageUpdate
+      );
+    };
   }, [employeeId]);
 
   /* ================= PREVIEW SELECTED IMAGE ================= */
@@ -77,7 +99,7 @@ export default function EmpImage({
           />
         ) : employee?.image_url ? (
           <img
-            src={`http://localhost:5000${employee.image_url}`}
+            src={`http://localhost:5000${employee.image_url}?v=${Date.now()}`}
             alt="Employee"
             className="object-cover w-full h-full rounded"
           />

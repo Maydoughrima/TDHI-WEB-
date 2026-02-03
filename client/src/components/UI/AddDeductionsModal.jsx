@@ -27,28 +27,33 @@ export default function AddDeductionsModal({
   useEffect(() => {
     if (!form.loan_type) return;
 
-    // 🔒 HARD BUSINESS RULES
-    if (form.loan_type === "SSS_LOAN") {
+    // ✅ FIRST CUTOFF ONLY
+    if (
+      form.loan_type === "SSS_LOAN" ||
+      form.loan_type === "SSS_SALARY_LOAN" ||
+      form.loan_type === "SSS_CALAMITY_LOAN" ||
+      form.loan_type === "PHILHEALTH_LOAN"
+    ) {
       setForm((prev) => ({
         ...prev,
         cutoff_behavior: "FIRST_CUTOFF_ONLY",
       }));
+      return;
     }
 
-    if (form.loan_type === "PHILHEALTH_LOAN") {
-      setForm((prev) => ({
-        ...prev,
-        cutoff_behavior: "FIRST_CUTOFF_ONLY",
-      }));
-    }
-
-    if (form.loan_type === "PAGIBIG_LOAN") {
+    // ✅ SECOND CUTOFF ONLY
+    if (
+      form.loan_type === "PAGIBIG_LOAN" ||
+      form.loan_type === "PAGIBIG_CALAMITY_LOAN"
+    ) {
       setForm((prev) => ({
         ...prev,
         cutoff_behavior: "SECOND_CUTOFF_ONLY",
       }));
+      return;
     }
 
+    // ✅ COMPANY LOAN = MANUAL
     if (form.loan_type === "COMPANY_LOAN") {
       setForm((prev) => ({
         ...prev,
@@ -65,7 +70,6 @@ export default function AddDeductionsModal({
     e.preventDefault();
 
     const user = JSON.parse(localStorage.getItem("user"));
-
     if (!user?.id) {
       setError("User session not found. Please re-login.");
       return;
@@ -92,8 +96,9 @@ export default function AddDeductionsModal({
           "x-user-id": user.id,
         },
         body: JSON.stringify({
-          loan_type: form.loan_type,
-          principal_amount: form.principal_amount || form.monthly_amortization,
+          loan_type: form.loan_type, // ✅ unchanged
+          principal_amount:
+            form.principal_amount || form.monthly_amortization,
           monthly_amortization: Number(form.monthly_amortization),
           cutoff_behavior: form.cutoff_behavior,
           start_date: form.start_date,
@@ -148,17 +153,28 @@ export default function AddDeductionsModal({
             className="p-2 border rounded-md"
           >
             <option value="">Select loan</option>
+
+            {/* EXISTING */}
             <option value="SSS_LOAN">SSS Loan</option>
-            <option value="PHILHEALTH_LOAN">PHILHEALTH Loan</option>
+            <option value="PHILHEALTH_LOAN">PhilHealth Loan</option>
             <option value="PAGIBIG_LOAN">Pag-IBIG Loan</option>
             <option value="COMPANY_LOAN">Company Loan</option>
+
+            {/* NEW */}
+            <option value="SSS_SALARY_LOAN">SSS Salary Loan</option>
+            <option value="SSS_CALAMITY_LOAN">SSS Calamity Loan</option>
+            <option value="PAGIBIG_CALAMITY_LOAN">
+              Pag-IBIG Calamity Loan
+            </option>
           </select>
 
           <input
             type="number"
             placeholder="Principal Amount (optional)"
             value={form.principal_amount}
-            onChange={(e) => handleChange("principal_amount", e.target.value)}
+            onChange={(e) =>
+              handleChange("principal_amount", e.target.value)
+            }
             className="p-2 border rounded-md"
           />
 
@@ -174,10 +190,10 @@ export default function AddDeductionsModal({
 
           <select
             value={form.cutoff_behavior}
-            disabled={
-              form.loan_type === "SSS_LOAN" || form.loan_type === "PAGIBIG_LOAN"
+            disabled={form.loan_type === "COMPANY_LOAN"}
+            onChange={(e) =>
+              handleChange("cutoff_behavior", e.target.value)
             }
-            onChange={(e) => handleChange("cutoff_behavior", e.target.value)}
             className="p-2 border rounded-md"
           >
             <option value="">Select cutoff</option>

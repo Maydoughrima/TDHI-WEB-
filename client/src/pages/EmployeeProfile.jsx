@@ -66,6 +66,13 @@ export default function EmployeeProfile() {
         if (!res.ok) {
           throw new Error(await res.text());
         }
+
+        // 🔔 LIVE UPDATE FOR EmpImage (ADDED)
+        window.dispatchEvent(
+          new CustomEvent("employee-image-updated", {
+            detail: { employeeId: selectedEmployeeId },
+          })
+        );
       }
 
       /* ============ 2) PERSONAL INFO SAVE ============ */
@@ -97,7 +104,7 @@ export default function EmployeeProfile() {
               "Content-Type": "application/json",
               ...authHeaders,
             },
-            body: JSON.stringify(payrollDraft), // ✅ send raw draft
+            body: JSON.stringify(payrollDraft),
           }
         );
 
@@ -140,7 +147,10 @@ export default function EmployeeProfile() {
 
           {/* ================= PAGE: PERSONAL ================= */}
           {page === "personal" && (
-            <div className="animate-fadeSlideIn" style={{ animationDuration: "0.45s" }}>
+            <div
+              className="animate-fadeSlideIn"
+              style={{ animationDuration: "0.45s" }}
+            >
               <PersonalInformation
                 isEditing={isEditing}
                 selectedEmployeeId={selectedEmployeeId}
@@ -162,7 +172,10 @@ export default function EmployeeProfile() {
 
           {/* ================= PAGE: EDUCATION ================= */}
           {page === "education" && (
-            <div className="animate-fadeSlideIn" style={{ animationDuration: "0.45s" }}>
+            <div
+              className="animate-fadeSlideIn"
+              style={{ animationDuration: "0.45s" }}
+            >
               <EducationalSummary
                 selectedEmployeeId={selectedEmployeeId}
                 isEditing={isEditing}
@@ -174,7 +187,10 @@ export default function EmployeeProfile() {
 
           {/* ================= PAGE: EMPLOYMENT ================= */}
           {page === "employment" && (
-            <div className="animate-fadeSlideIn" style={{ animationDuration: "0.45s" }}>
+            <div
+              className="animate-fadeSlideIn"
+              style={{ animationDuration: "0.45s" }}
+            >
               <EmploymentHistory
                 selectedEmployeeId={selectedEmployeeId}
                 goBack={() => setPage("education")}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchTransactions } from "../../../../server/api/transactionsAPI";
 
 const ACTION_OPTIONS = ["ALL", "ADD", "EDIT", "DELETE", "LOGIN"];
-const STATUS_OPTIONS = ["ALL", "IN_PROGRESS", "COMPLETED", "PENDING", "ERROR"];
+const STATUS_OPTIONS = ["ALL", "IN_PROGRESS", "COMPLETED", "PENDING", "ERROR", "APPROVED"];
 
 const STATUS_STYLE = {
   IN_PROGRESS: "text-yellow-600 bg-yellow-100",

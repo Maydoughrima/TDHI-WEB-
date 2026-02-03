@@ -159,7 +159,9 @@ router.patch("/:id/finalize", async (req, res) => {
   try {
     const actorId = req.headers["x-user-id"];
     if (!actorId) {
-      return res.status(401).json({ success: false, message: "Unauthenticated" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Unauthenticated" });
     }
 
     const actorRole = "PAYROLL_CHECKER";
@@ -284,11 +286,11 @@ router.patch("/:id/finalize", async (req, res) => {
       }
 
       /* =========================
-         LOANS
+         ✅ LOANS (FIXED: RESPECT cutoff_behavior)
       ========================= */
       const { rows: loanRows } = await client.query(
         `
-        SELECT id, loan_type
+        SELECT id, loan_type, cutoff_behavior
         FROM employee_loans
         WHERE employee_id = $1
           AND is_active = true
@@ -297,10 +299,16 @@ router.patch("/:id/finalize", async (req, res) => {
       );
 
       for (const loan of loanRows) {
+        const cb = loan.cutoff_behavior; // FIRST_CUTOFF_ONLY | SECOND_CUTOFF_ONLY | (empty/null for company)
+
+        // ✅ apply employee_loans cutoff rule (this fixes PAGIBIG_CALAMITY_LOAN showing wrong)
+        if (cb === "FIRST_CUTOFF_ONLY" && isSecondCutoff) continue;
+        if (cb === "SECOND_CUTOFF_ONLY" && !isSecondCutoff) continue;
+
+        // ✅ keep your legacy hard rules as extra safety
         if (
           isSecondCutoff &&
-          (loan.loan_type === "SSS_LOAN" ||
-           loan.loan_type === "PHILHEALTH_LOAN")
+          (loan.loan_type === "SSS_LOAN" || loan.loan_type === "PHILHEALTH_LOAN")
         ) continue;
 
         if (!isSecondCutoff && loan.loan_type === "PAGIBIG_LOAN") continue;
@@ -315,7 +323,7 @@ router.patch("/:id/finalize", async (req, res) => {
           await insertDeductionRow(client, {
             payrollFileId: payrollId,
             employeeId: emp.id,
-            deductionType: loan.loan_type,
+            deductionType: loan.loan_type, // PAGIBIG_CALAMITY_LOAN / SSS_SALARY_LOAN / etc.
             amount: applied.deducted_amount,
             sourceType: "LOAN",
             cutoff: cutoffLabel,
@@ -435,7 +443,6 @@ router.patch("/:id/finalize", async (req, res) => {
 
     await client.query("COMMIT");
     res.json({ success: true });
-
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Finalize payroll error:", err);
@@ -444,6 +451,7 @@ router.patch("/:id/finalize", async (req, res) => {
     client.release();
   }
 });
+
 
 
 

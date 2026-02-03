@@ -7,7 +7,6 @@ import { SlGraph } from "react-icons/sl";
 export default function EncodingSummaryCard({
   totalEmployees = 0,
   pending = 0,
-  inProgress = 0,
   completed = 0,
 }) {
   const getPercent = (value) => {
@@ -17,18 +16,14 @@ export default function EncodingSummaryCard({
 
   return (
     <div className="bg-secondary rounded-md shadow-md p-4 flex flex-col gap-4">
-
       {/* HEADER */}
       <div className="flex items-center gap-2">
         <SlGraph className="text-bg text-lg" />
-        <p className="text-bg font-heading text-sm">
-          Encoding Summary
-        </p>
+        <p className="text-bg font-heading text-sm">Encoding Summary</p>
       </div>
 
       {/* PROGRESS LIST */}
       <div className="flex flex-col gap-3">
-
         {/* EMPLOYEES */}
         <div>
           <div className="flex justify-between text-xs text-bg mb-1">
@@ -36,10 +31,7 @@ export default function EncodingSummaryCard({
             <span>{totalEmployees}</span>
           </div>
           <div className="w-full bg-bg/30 rounded-full h-2">
-            <div
-              className="bg-bg h-2 rounded-full"
-              style={{ width: "100%" }}
-            />
+            <div className="bg-bg h-2 rounded-full" style={{ width: "100%" }} />
           </div>
         </div>
 
@@ -51,22 +43,8 @@ export default function EncodingSummaryCard({
           </div>
           <div className="w-full bg-bg/30 rounded-full h-2">
             <div
-              className="bg-gray-300 h-2 rounded-full"
+              className="bg-complimentary h-2 rounded-full"
               style={{ width: `${getPercent(pending)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* IN PROGRESS */}
-        <div>
-          <div className="flex justify-between text-xs text-bg mb-1">
-            <span>In Progress</span>
-            <span>{inProgress}</span>
-          </div>
-          <div className="w-full bg-bg/30 rounded-full h-2">
-            <div
-              className="bg-yellow-400 h-2 rounded-full"
-              style={{ width: `${getPercent(inProgress)}%` }}
             />
           </div>
         </div>
@@ -84,7 +62,6 @@ export default function EncodingSummaryCard({
             />
           </div>
         </div>
-
       </div>
 
       {/* SCALE */}

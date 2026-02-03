@@ -16,12 +16,7 @@ const router = express.Router();
  */
 router.get("/transactions", async (req, res) => {
   try {
-    const {
-      action,
-      status,
-      limit = 20,
-      offset = 0,
-    } = req.query;
+    const { action, status, limit = 20, offset = 0 } = req.query;
 
     const values = [];
     let whereClause = "WHERE 1=1";
@@ -73,6 +68,12 @@ router.get("/transactions", async (req, res) => {
 
       FROM transactions t
       JOIN users u ON u.id = t.actor_id
+
+      -- LEAVE REQUEST PATH
+      LEFT JOIN leave_requests lr
+      ON t.entity = 'LEAVE_REQUEST'
+      AND lr.id = t.entity_id
+ 
       LEFT JOIN employees e ON e.id = t.entity_id
 
       ${whereClause}

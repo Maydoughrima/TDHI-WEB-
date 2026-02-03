@@ -1,20 +1,37 @@
 import React, { useState } from "react";
 import logo from "../../assets/logo.png";
-import { Link, NavLink } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { LuHouse, LuClipboardList } from "react-icons/lu";
 import { FaRegFile } from "react-icons/fa";
 import { IoMenu, IoClose } from "react-icons/io5";
 import { GoPeople } from "react-icons/go";
 import { TbReportSearch } from "react-icons/tb";
 import { GrTransaction } from "react-icons/gr";
-import { MdOutlineFeedback } from "react-icons/md";
+import { MdOutlineRequestPage } from "react-icons/md";
+import { FaRegSquareCheck } from "react-icons/fa6";
 import pfpimg from "../../assets/ds1232.jpg";
 
 export default function Sidebar() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  const user = JSON.parse(localStorage.getItem("user"));
+  const role = user?.role; // "USER" | "PAYROLL_CHECKER"
+
   const navItemBase =
-    "flex items-center gap-3 px-3 py-2 rounded-lg w-full whitespace-nowrap";
+    "flex items-center gap-3 px-3 py-2 rounded-lg w-full whitespace-nowrap transition";
+
+  const activeClass = "bg-accent text-white";
+  const normalClass = "text-fontc hover:bg-bgshade";
+  const disabledClass =
+    "bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none";
+
+  const navClass = ({ isActive, disabled }) => {
+    if (disabled) return `${navItemBase} ${disabledClass}`;
+    return `${navItemBase} ${isActive ? activeClass : normalClass}`;
+  };
+
+  const isUser = role === "USER";
+  const isChecker = role === "PAYROLL_CHECKER";
 
   return (
     <>
@@ -31,13 +48,10 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          w-64 bg-bg
-          fixed inset-y-0 left-0
+          w-64 bg-bg fixed inset-y-0 left-0
           transform transition-transform duration-300
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          md:static md:translate-x-0
-          min-h-screen
-          z-10
+          md:static md:translate-x-0 min-h-screen z-10
         `}
       >
         <div className="flex flex-col h-full px-4 py-4">
@@ -60,10 +74,8 @@ export default function Sidebar() {
 
             <NavLink
               to="/user/dashboard"
-              className={({ isActive }) =>
-                `${navItemBase} ${
-                  isActive ? "bg-accent text-white" : "text-fontc"
-                }`
+              className={(props) =>
+                navClass({ ...props, disabled: false })
               }
             >
               <LuHouse className="text-xl shrink-0" />
@@ -72,10 +84,8 @@ export default function Sidebar() {
 
             <NavLink
               to="/user/generatefile"
-              className={({ isActive }) =>
-                `${navItemBase} ${
-                  isActive ? "bg-accent text-white" : "text-fontc"
-                }`
+              className={(props) =>
+                navClass({ ...props, disabled: isChecker })
               }
             >
               <FaRegFile className="text-xl shrink-0" />
@@ -89,10 +99,8 @@ export default function Sidebar() {
 
             <NavLink
               to="/user/employeeprofile"
-              className={({ isActive }) =>
-                `${navItemBase} ${
-                  isActive ? "bg-accent text-white" : "text-fontc"
-                }`
+              className={(props) =>
+                navClass({ ...props, disabled: false })
               }
             >
               <GoPeople className="text-xl shrink-0" />
@@ -108,10 +116,8 @@ export default function Sidebar() {
 
             <NavLink
               to="/user/ledger"
-              className={({ isActive }) =>
-                `${navItemBase} ${
-                  isActive ? "bg-accent text-white" : "text-black"
-                }`
+              className={(props) =>
+                navClass({ ...props, disabled: isChecker })
               }
             >
               <LuClipboardList className="text-xl shrink-0" />
@@ -120,10 +126,8 @@ export default function Sidebar() {
 
             <NavLink
               to="/user/reports"
-              className={({ isActive }) =>
-                `${navItemBase} ${
-                  isActive ? "bg-accent text-white" : "text-black"
-                }`
+              className={(props) =>
+                navClass({ ...props, disabled: isChecker })
               }
             >
               <TbReportSearch className="text-xl shrink-0" />
@@ -131,19 +135,29 @@ export default function Sidebar() {
             </NavLink>
 
             <NavLink
-              to="/user/feedback"
-              className={navItemBase + " text-fontc"}
+              to="/user/reqleave"
+              className={(props) =>
+                navClass({ ...props, disabled: isChecker })
+              }
             >
-              <MdOutlineFeedback className="text-xl shrink-0 text-gray-500" />
-              <span className="font-heading">Feedback</span>
+              <MdOutlineRequestPage className="text-xl shrink-0" />
+              <span className="font-heading">Request Leave</span>
+            </NavLink>
+
+            <NavLink
+              to="/user/appleave"
+              className={(props) =>
+                navClass({ ...props, disabled: isUser })
+              }
+            >
+              <FaRegSquareCheck className="text-xl shrink-0" />
+              <span className="font-heading">Approve Leave</span>
             </NavLink>
 
             <NavLink
               to="/user/transactions"
-              className={({ isActive }) =>
-                `${navItemBase} ${
-                  isActive ? "bg-accent text-white" : "text-black"
-                }`
+              className={(props) =>
+                navClass({ ...props, disabled: false })
               }
             >
               <GrTransaction className="text-xl shrink-0" />
@@ -151,7 +165,7 @@ export default function Sidebar() {
             </NavLink>
           </div>
 
-          {/* User Details (Mobile) */}
+          {/* Mobile User */}
           <div className="mt-auto flex items-center gap-3 bg-bgshade py-3 px-4 lg:hidden">
             <img
               src={pfpimg}
@@ -159,7 +173,7 @@ export default function Sidebar() {
               className="w-10 h-10 rounded-full object-cover"
             />
             <span className="text-sm font-medium text-primary">
-              Andrea Suello
+              {user?.fullname || "User"}
             </span>
           </div>
         </div>

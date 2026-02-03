@@ -43,7 +43,7 @@
 @media print {
 
   /* ===============================
-     1️⃣ HARD RESET (NO MERCY)
+     1️⃣ HARD RESET
      =============================== */
   html,
   body {
@@ -91,12 +91,13 @@
   input,
   textarea,
   img,
-  .no-print {
+  .no-print,
+  .screen-only {
     display: none !important;
   }
 
   /* ===============================
-     5️⃣ TABLE NORMALIZATION
+     5️⃣ TABLE NORMALIZATION (GLOBAL)
      =============================== */
   table {
     width: 100% !important;
@@ -122,7 +123,7 @@
      6️⃣ PAGE CONFIG
      =============================== */
   @page {
-    size: portrait;
+    size: A4 landscape;
     margin: 10mm;
   }
 
@@ -131,7 +132,7 @@
   }
 
   /* ===============================
-     7️⃣ HEADER FIX (CENTER + SPACING)
+     7️⃣ HEADER FIX
      =============================== */
   .print-header {
     text-align: center;
@@ -151,7 +152,7 @@
   }
 
   /* ===============================
-     8️⃣ META SPACING FIX
+     8️⃣ META FIX
      =============================== */
   .print-meta,
   .print-period {
@@ -171,7 +172,7 @@
   }
 
   /* ===============================
-     9️⃣ PREPARED / APPROVED FIX
+     9️⃣ FOOTER SIGNATURES
      =============================== */
   .print-footer {
     display: flex;
@@ -195,6 +196,45 @@
     width: 100%;
     border-bottom: 1px solid #000;
   }
+
+  /* ===============================
+     🔟 REPORTS / EXPENDITURES FIX
+     (SAFE — DOES NOT TOUCH LEDGER)
+     =============================== */
+  #reports-print .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  #reports-print table {
+  width: 100% !important;
+  min-width: 1800px; /* allow horizontal breathing room */
+  table-layout: auto; /* 🔑 FIX */
+}
+
+  #reports-print th,
+  #reports-print td {
+    font-size: 10px;
+    padding: 4px 6px;
+    white-space: nowrap;
+  }
+
+  /* ===============================
+     1️⃣1️⃣ PRINT-ONLY VISIBILITY
+     =============================== */
+  .print-only {
+    display: inline !important;
+  }
+}
+
+/* =========================================================
+   SCREEN / PRINT VISIBILITY HELPERS
+   ========================================================= */
+.print-only {
+  display: none;
+}
+
+.screen-only {
+  display: inline;
 }
 
 /* =========================================================
@@ -223,7 +263,7 @@
 }
 
 /* =========================================================
-   TRANSACTION PRINT (SPECIFIC)
+   TRANSACTION PRINT (SAFE)
    ========================================================= */
 #transaction-print h1 {
   font-size: 18px;
