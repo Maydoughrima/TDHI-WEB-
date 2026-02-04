@@ -8,17 +8,33 @@ export default function PayrollInfoModal({ form, handleChange }) {
     Math.round((Number(value) || 0) * 100) / 100;
 
   /**
-   * BASIC RATE = QUINCENA (15 DAYS)
-   * DAILY  = basic / 15
-   * HOURLY = daily / 8
+   * PAYROLL FORMULA (QUINCENA-BASED)
+   *
+   * Basic Rate = 13 working days
+   * Daily Rate = Basic Rate / 13
+   * Hourly Rate = (Basic Rate / 13) / 8
+   *
+   * IMPORTANT:
+   * - Keep basicRate as STRING while typing (to allow centavos)
+   * - Convert to number ONLY for calculations
    */
   const handleBasicRateChange = (value) => {
-    const basic = Number(value) || 0;
+    // ✅ keep raw input
+    handleChange("basicRate", value);
 
-    const daily = basic / 15;
-    const hourly = daily / 8;
+    const numeric = Number(value);
 
-    handleChange("basicRate", round2(basic));
+    if (isNaN(numeric)) {
+      handleChange("dailyRate", "");
+      handleChange("hourlyRate", "");
+      return;
+    }
+
+    // ✅ EXPLICIT FORMULA
+    const daily = numeric / 13;
+    const hourly = numeric / 13 / 8;
+
+    // 🔒 round derived values only
     handleChange("dailyRate", round2(daily));
     handleChange("hourlyRate", round2(hourly));
   };
@@ -30,7 +46,9 @@ export default function PayrollInfoModal({ form, handleChange }) {
         <Dropdown
           label="Employee Status"
           value={form.employeeStatus || ""}
-          onChange={(e) => handleChange("employeeStatus", e.target.value)}
+          onChange={(e) =>
+            handleChange("employeeStatus", e.target.value)
+          }
           options={[
             { value: "Regular", label: "Regular" },
             { value: "Probitionary", label: "Probitionary" },
@@ -42,14 +60,20 @@ export default function PayrollInfoModal({ form, handleChange }) {
         <TextField
           label="Designation"
           value={form.designation || ""}
-          onChange={(e) => handleChange("designation", e.target.value)}
+          onChange={(e) =>
+            handleChange("designation", e.target.value)
+          }
         />
 
         {/* 🔑 SOURCE OF TRUTH */}
         <TextField
           label="Basic Rate (Quincena – 15 days)"
+          type="number"
+          step="0.01"
           value={form.basicRate || ""}
-          onChange={(e) => handleBasicRateChange(e.target.value)}
+          onChange={(e) =>
+            handleBasicRateChange(e.target.value)
+          }
         />
 
         {/* 🔒 AUTO-COMPUTED */}
@@ -71,25 +95,33 @@ export default function PayrollInfoModal({ form, handleChange }) {
         <TextField
           label="Leave Credits"
           value={form.leaveCredits || ""}
-          onChange={(e) => handleChange("leaveCredits", e.target.value)}
+          onChange={(e) =>
+            handleChange("leaveCredits", e.target.value)
+          }
         />
 
         <TextField
           label="SSS No."
           value={form.sssNo || ""}
-          onChange={(e) => handleChange("sssNo", e.target.value)}
+          onChange={(e) =>
+            handleChange("sssNo", e.target.value)
+          }
         />
 
         <TextField
           label="HDMF No."
           value={form.hdmfNo || ""}
-          onChange={(e) => handleChange("hdmfNo", e.target.value)}
+          onChange={(e) =>
+            handleChange("hdmfNo", e.target.value)
+          }
         />
 
         <TextField
           label="TIN No."
           value={form.tinNo || ""}
-          onChange={(e) => handleChange("tinNo", e.target.value)}
+          onChange={(e) =>
+            handleChange("tinNo", e.target.value)
+          }
         />
       </div>
     </div>

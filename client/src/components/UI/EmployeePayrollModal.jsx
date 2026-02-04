@@ -71,8 +71,25 @@ export default function EmployeePayrollModal({
   const [dbSnapshot, setDbSnapshot] = useState(null);
   const [snapshotLoaded, setSnapshotLoaded] = useState(false);
 
+  //CONST FOR IMAGE
+  const [employeeWithImage, setEmployeeWithImage] = useState(null);
+
   // ✅ only “locks” initialization after we have all required data
   const seededRef = useRef(false);
+
+   /* ================= FETCH FULL EMPLOYEE (IMAGE FIX) ================= */
+  useEffect(() => {
+    if (!isOpen || !employee?.id) return;
+
+    fetch(`http://localhost:5000/api/employees/${employee.id}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success) setEmployeeWithImage(j.data);
+      })
+      .catch(() => {});
+  }, [isOpen, employee?.id]);
+
+  const emp = employeeWithImage || employee;
 
   /* ================= PAYROLL FILE ================= */
   const payrollFile = {
@@ -221,12 +238,10 @@ function computePhilHealth(monthlyBase) {
 
   const FLOOR = 10000;
   const CEILING = 100000;
-  const RATE = 0.025;
+  const EMPLOYEE_RATE = 0.025;
 
   const base = Math.min(Math.max(monthlyBase, FLOOR), CEILING);
-  const totalPremium = base * RATE;
-
-  return Number((totalPremium / 2).toFixed(2)); // ✅ employee share
+  return Number((base * EMPLOYEE_RATE).toFixed(2));
 }
 
   // 🔹 Pag-IBIG (2% capped later — TEMP)
@@ -541,11 +556,22 @@ function computePhilHealth(monthlyBase) {
 
         {/* EMPLOYEE INFO */}
         <div className="flex items-center gap-4 px-6 py-3 border-b">
-          <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center font-semibold text-lg">
-            {employee.name
-              ?.split(" ")
-              .map((n) => n[0])
-              .slice(0, 2)}
+          <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+            {/*FETCH IMAGE*/}
+            {emp?.image_url ? (
+              <img
+                src={`http://localhost:5000${emp.image_url}?v=${Date.now()}`}
+                alt="Employee"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="font-semibold text-lg">
+                {emp?.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .slice(0, 2)}
+              </span>
+            )}
           </div>
           <div>
             <h3 className="font-semibold text-lg">{employee.name}</h3>

@@ -117,7 +117,7 @@ function App() {
           <Route
             path="/user/transactions"
             element={
-              <RequireRole allowedRoles={["PAYROLL_CHECKER"]}>
+              <RequireRole allowedRoles={["USER", "PAYROLL_CHECKER"]}>
                 <Transactions />
               </RequireRole>
             }
