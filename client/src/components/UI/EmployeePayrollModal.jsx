@@ -1,13 +1,26 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import Button from "./Button";
 
+/* ================= MANUAL ADJUSTMENT UNITS (META) ================= */
+const ADJUSTMENT_META = {
+  // HRS-based (computed via hourlyRate)
+  Overtime: { unit: "HRS" },
+  "Night Premium": { unit: "HRS" },
+  "Extend Duty": { unit: "HRS" },
+  "Regular Holiday": { unit: "HRS" },
+  "Special Holiday": { unit: "HRS" },
+
+  // MINS-based (computed via hourlyRate)
+  "Late / Undertime": { unit: "MINS" },
+};
+
 /* ================= BUILT-IN MANUAL ADJUSTMENTS ================= */
 const ADD_ADJUSTMENTS = [
-  "Overtime",
-  "Night Premium",
-  "Regular Holiday",
-  "Special Holiday",
-  "Extend Duty",
+  "Overtime / HRS",
+  "Night Premium / HRS",
+  "Regular Holiday / HRS",
+  "Special Holiday / HRS",
+  "Extend Duty / HRS",
   "Food Allow / Others",
   "On Call",
   "Others",
@@ -16,7 +29,7 @@ const ADD_ADJUSTMENTS = [
 ];
 
 const DEDUCT_ADJUSTMENTS = [
-  "Late / Undertime",
+  "Late / Undertime / MINS",
   "Hospital Accounts",
   "W/holding Tax",
   "Tax Compensation",
@@ -77,7 +90,7 @@ export default function EmployeePayrollModal({
   // ✅ only “locks” initialization after we have all required data
   const seededRef = useRef(false);
 
-   /* ================= FETCH FULL EMPLOYEE (IMAGE FIX) ================= */
+  /* ================= FETCH FULL EMPLOYEE (IMAGE FIX) ================= */
   useEffect(() => {
     if (!isOpen || !employee?.id) return;
 
@@ -103,19 +116,48 @@ export default function EmployeePayrollModal({
   /* ================= HELPERS ================= */
   const round = (v) => Math.round((Number(v) || 0) * 100) / 100;
 
+  /*===============REF2============== */
   const defaultManualAdjustments = useMemo(
     () => [
-      ...ADD_ADJUSTMENTS.map((label) => ({ label, amount: 0, effect: "ADD" })),
-      ...DEDUCT_ADJUSTMENTS.map((label) => ({
-        label,
-        amount: 0,
-        effect: "DEDUCT",
-      })),
+      ...ADD_ADJUSTMENTS.map((label) => {
+        // extract clean label (remove unit suffix)
+        const cleanLabel = label.replace(" / HRS", "").replace(" / MINS", "");
+
+        const meta = ADJUSTMENT_META[cleanLabel];
+
+        return {
+          label, // UI label (unchanged)
+          cleanLabel, // logic-safe label
+          unit: meta?.unit || "PESO", // HRS | MINS | PESO
+          amount: 0, // user input (hrs / mins / peso)
+          effect: "ADD",
+        };
+      }),
+
+      ...DEDUCT_ADJUSTMENTS.map((label) => {
+        const cleanLabel = label.replace(" / HRS", "").replace(" / MINS", "");
+
+        const meta = ADJUSTMENT_META[cleanLabel];
+
+        return {
+          label,
+          cleanLabel,
+          unit: meta?.unit || "PESO",
+          amount: 0,
+          effect: "DEDUCT",
+        };
+      }),
     ],
     [],
   );
-
-  const computeTotals = (quincena, gov = [], loans = [], manual = []) => {
+  /*============REF2======================*/
+  const computeTotals = (
+    quincena,
+    gov = [],
+    loans = [],
+    manual = [],
+    hourlyRate = 0,
+  ) => {
     let add = 0;
     let deduct = 0;
 
@@ -123,9 +165,20 @@ export default function EmployeePayrollModal({
     loans.forEach((l) => (deduct += Number(l.amount || 0)));
 
     manual.forEach((m) => {
-      const amt = Number(m.amount || 0);
-      if (m.effect === "ADD") add += amt;
-      else deduct += amt;
+      let computed = 0;
+      const qty = Number(m.amount || 0);
+
+      if (m.unit === "HRS") {
+        computed = qty * hourlyRate;
+      } else if (m.unit === "MINS") {
+        computed = (qty / 60) * hourlyRate;
+      } else {
+        // PESO
+        computed = qty;
+      }
+
+      if (m.effect === "ADD") add += computed;
+      else deduct += computed;
     });
 
     return {
@@ -224,25 +277,25 @@ export default function EmployeePayrollModal({
     return row ? row.employee : 0;
   };
 
-/**
- * PhilHealth EMPLOYEE SHARE
- * Rule:
- * - Monthly salary
- * - Floor: 10,000
- * - Ceiling: 100,000
- * - Rate: 2.5%
- * - Employee pays 50%
- */
-function computePhilHealth(monthlyBase) {
-  if (!monthlyBase || monthlyBase <= 0) return 0;
+  /**
+   * PhilHealth EMPLOYEE SHARE
+   * Rule:
+   * - Monthly salary
+   * - Floor: 10,000
+   * - Ceiling: 100,000
+   * - Rate: 2.5%
+   * - Employee pays 50%
+   */
+  function computePhilHealth(monthlyBase) {
+    if (!monthlyBase || monthlyBase <= 0) return 0;
 
-  const FLOOR = 10000;
-  const CEILING = 100000;
-  const EMPLOYEE_RATE = 0.025;
+    const FLOOR = 10000;
+    const CEILING = 100000;
+    const EMPLOYEE_RATE = 0.025;
 
-  const base = Math.min(Math.max(monthlyBase, FLOOR), CEILING);
-  return Number((base * EMPLOYEE_RATE).toFixed(2));
-}
+    const base = Math.min(Math.max(monthlyBase, FLOOR), CEILING);
+    return Number((base * EMPLOYEE_RATE).toFixed(2));
+  }
 
   // 🔹 Pag-IBIG (2% capped later — TEMP)
   const computePagIbig = (monthlyRate) => {
@@ -339,11 +392,13 @@ function computePhilHealth(monthlyBase) {
     // -------------------------------
     // 5️⃣ TOTALS
     // -------------------------------
+    /*======ref3======*/
     const totals = computeTotals(
       quincena,
       govDeductions,
       loanDeductions,
       manualAdjustments,
+      payrollInfo?.hourly_rate || 0,
     );
 
     return {
@@ -518,7 +573,7 @@ function computePhilHealth(monthlyBase) {
     isEditing,
   ]);
 
-  /* ================= UPDATE MANUAL ================= */
+  /* ================= UPDATE MANUAL ================= */ /* =========REF3========== */
   const updateManual = (i, value) => {
     if (!isEditing) return;
 
@@ -526,7 +581,29 @@ function computePhilHealth(monthlyBase) {
       if (!p) return p;
 
       const list = [...(p.manualAdjustments || [])];
-      list[i] = { ...list[i], amount: value === "" ? 0 : Number(value) };
+      const item = list[i];
+
+      // allow empty input
+      const units = value === "" ? 0 : Number(value);
+      if (isNaN(units)) return p;
+
+      const hourlyRate = Number(p.hourlyRate || 0);
+
+      let computedAmount = units;
+
+      // 🔥 UNIT-BASED COMPUTATION (NO UI CHANGE)
+      if (item.label.includes("/ HRS")) {
+        computedAmount = units * hourlyRate;
+      }
+
+      if (item.label.includes("/ MINS")) {
+        computedAmount = (units / 60) * hourlyRate;
+      }
+
+      list[i] = {
+        ...item,
+        amount: Math.round(computedAmount * 100) / 100, // peso value
+      };
 
       return {
         ...p,
@@ -536,6 +613,7 @@ function computePhilHealth(monthlyBase) {
           p.govDeductions,
           p.loanDeductions,
           list,
+          hourlyRate,
         ),
       };
     });
@@ -635,7 +713,21 @@ function computePhilHealth(monthlyBase) {
                               disabled={!isEditing}
                               className="border px-2 py-1 w-24 text-right rounded"
                               value={m.amount}
-                              onChange={(e) => updateManual(i, e.target.value)}
+                              onChange={(e) => {
+                                // allow typing freely — no compute here
+                                const list = [...form.manualAdjustments];
+                                list[i] = {
+                                  ...list[i],
+                                  amount: e.target.value,
+                                };
+                                setForm({ ...form, manualAdjustments: list });
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  updateManual(i, e.target.value);
+                                  e.target.blur(); // optional but feels good UX-wise
+                                }
+                              }}
                             />
                           </td>
                         </tr>

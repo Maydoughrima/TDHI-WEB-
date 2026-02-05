@@ -1,9 +1,9 @@
 import { LuClock } from "react-icons/lu";
 import { FaCheckCircle } from "react-icons/fa";
 
-/**
- * DATE FORMATTER
- */
+/* =====================================================
+   DATE FORMATTER (SINGLE SOURCE)
+===================================================== */
 const formatDate = (dateString) => {
   if (!dateString) return "-";
 
@@ -14,9 +14,9 @@ const formatDate = (dateString) => {
   });
 };
 
-/**
- * COLUMN CONFIG
- */
+/* =====================================================
+   COLUMN CONFIG
+===================================================== */
 const payrollColumns = [
   { label: "Paycode", key: "payCode", align: "left" },
   { label: "Date Generated", key: "dateGenerated", align: "left" },
@@ -28,16 +28,23 @@ const payrollColumns = [
   { label: "Status", key: "status", align: "center" },
 ];
 
-export default function PayrollTable({ data = [], loading, onOpenPayroll }) {
-  /**
-   * Normalize backend payroll file → table row
-   */
+export default function PayrollTable({
+  data = [],
+  loading,
+  onOpenPayroll,
+  search = "",
+}) {
+  /* =====================================================
+     NORMALIZE BACKEND DATA → TABLE ROWS
+  ===================================================== */
   const rows = data.map((p) => {
     const start = p.period_start ? new Date(p.period_start) : null;
     const end = p.period_end ? new Date(p.period_end) : null;
 
     const numOfDays =
-      start && end ? Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1 : "-";
+      start && end
+        ? Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1
+        : "-";
 
     return {
       id: p.id,
@@ -52,6 +59,27 @@ export default function PayrollTable({ data = [], loading, onOpenPayroll }) {
     };
   });
 
+  /* =====================================================
+     GLOBAL SEARCH (AFTER NORMALIZATION)
+  ===================================================== */
+  const filteredRows = rows.filter((row) => {
+    if (!search) return true;
+
+    const q = search.toLowerCase();
+
+    return (
+      row.payCode?.toLowerCase().includes(q) ||
+      row.status?.toLowerCase().includes(q) ||
+      formatDate(row.periodStart).toLowerCase().includes(q) ||
+      formatDate(row.periodEnd).toLowerCase().includes(q) ||
+      String(row.numOfDays).includes(q) ||
+      row.monthEnd?.toLowerCase().includes(q)
+    );
+  });
+
+  /* =====================================================
+     CELL RENDERER
+  ===================================================== */
   const renderCellValue = (row, col) => {
     if (
       col.key === "dateGenerated" ||
@@ -68,6 +96,9 @@ export default function PayrollTable({ data = [], loading, onOpenPayroll }) {
     return row[col.key] ?? "-";
   };
 
+  /* =====================================================
+     RENDER
+  ===================================================== */
   return (
     <div className="overflow-x-auto bg-white rounded-md shadow-sm">
       <table className="min-w-full divide-y divide-gray-200">
@@ -96,7 +127,7 @@ export default function PayrollTable({ data = [], loading, onOpenPayroll }) {
                 Loading payroll files...
               </td>
             </tr>
-          ) : rows.length === 0 ? (
+          ) : filteredRows.length === 0 ? (
             <tr>
               <td
                 colSpan={payrollColumns.length}
@@ -106,7 +137,7 @@ export default function PayrollTable({ data = [], loading, onOpenPayroll }) {
               </td>
             </tr>
           ) : (
-            rows.map((row) => (
+            filteredRows.map((row) => (
               <tr
                 key={row.id}
                 onClick={() => onOpenPayroll(row)}

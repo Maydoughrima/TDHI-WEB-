@@ -1,7 +1,7 @@
 import React from "react";
 import Button from "../UI/Button";
 import { useNavigate } from "react-router-dom";
-import pfpimg from "../../assets/ds1232.jpg";
+import defaultAvatar from "../../assets/Logo.png"; // ✅ fallback avatar
 
 // simple action → UI mapping
 const actionMeta = {
@@ -38,6 +38,11 @@ export default function TransactionHistory({ transactions = [] }) {
             dot: "bg-gray-400",
           };
 
+          const avatarSrc =
+            t.actor_profile_image && t.actor_profile_image.startsWith("http")
+              ? t.actor_profile_image
+              : defaultAvatar;
+
           return (
             <div
               key={t.id}
@@ -46,8 +51,9 @@ export default function TransactionHistory({ transactions = [] }) {
               {/* LEFT — ACTOR */}
               <div className="flex items-center gap-3">
                 <img
-                  src={pfpimg}
-                  className="w-10 h-10 rounded-full object-cover"
+                  src={avatarSrc}
+                  onError={(e) => (e.currentTarget.src = defaultAvatar)}
+                  className="w-10 h-10 rounded-full object-cover border"
                   alt="avatar"
                 />
 
@@ -55,9 +61,7 @@ export default function TransactionHistory({ transactions = [] }) {
                   <p className="text-sm font-heading">
                     {t.actor_name || "System"}
                   </p>
-                  <p className="text-xs text-gray-500">
-                    {t.actor_role || "—"}
-                  </p>
+                  <p className="text-xs text-gray-500">{t.actor_role || "—"}</p>
                 </div>
               </div>
 
@@ -75,13 +79,9 @@ export default function TransactionHistory({ transactions = [] }) {
               <div className="hidden md:flex flex-col items-end justify-center text-right">
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
-                  <span className={`text-sm ${meta.color}`}>
-                    {meta.label}
-                  </span>
+                  <span className={`text-sm ${meta.color}`}>{meta.label}</span>
                 </div>
-                <p className="text-xs text-gray-500">
-                  {t.entity}
-                </p>
+                <p className="text-xs text-gray-500">{t.entity}</p>
               </div>
             </div>
           );

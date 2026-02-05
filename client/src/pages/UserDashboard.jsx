@@ -14,22 +14,29 @@ import TransactionHistorySummary from "../components/Composite/TransactionHistor
 import TransactionHistory from "../components/Composite/TransactionHistory.jsx";
 
 export default function UserDashboard() {
-  // UI
+  /* ================= UI ================= */
   const [isPayrollOpen, setIsPayrollOpen] = useState(false);
 
-  // PAYROLL
+  /* ================= PAYROLL ================= */
   const [payrollFiles, setPayrollFiles] = useState([]);
   const [selectedPayroll, setSelectedPayroll] = useState(null);
   const [overview, setOverview] = useState(null);
 
-  // ENCODING SUMMARY (latest pending payroll)
+  /* ================= ENCODING SUMMARY ================= */
   const [encodingSummary, setEncodingSummary] = useState({
     total_employees: 0,
     completed: 0,
     pending: 0,
+    paycode: "-",
   });
 
-  // TRANSACTION SUMMARY
+  /* ================= LEAVE SUMMARY ================= */
+  const [leaveSummary, setLeaveSummary] = useState({
+    pendingTotal: 0,
+    approved: 0,
+  });
+
+  /* ================= TRANSACTION SUMMARY ================= */
   const [transactionSummary, setTransactionSummary] = useState({
     total: 0,
     created: 0,
@@ -38,10 +45,10 @@ export default function UserDashboard() {
     last_activity: null,
   });
 
-  // RECENT TRANSACTIONS (preview only)
+  /* ================= RECENT TRANSACTIONS ================= */
   const [transactions, setTransactions] = useState([]);
 
-  // ================= UI HANDLERS =================
+  /* ================= UI HANDLERS ================= */
   const handleTogglePayroll = () => {
     setIsPayrollOpen((prev) => !prev);
   };
@@ -51,19 +58,19 @@ export default function UserDashboard() {
     setIsPayrollOpen(false);
   };
 
-  // ================= FETCH PAYROLL FILES =================
+  /* ================= FETCH PAYROLL FILES ================= */
   useEffect(() => {
     fetch("/api/dashboard/payroll-files")
       .then((res) => res.json())
       .then((json) => {
         if (json.success && json.data.length > 0) {
           setPayrollFiles(json.data);
-          setSelectedPayroll(json.data[0]); // latest DONE payroll
+          setSelectedPayroll(json.data[0]);
         }
       });
   }, []);
 
-  // ================= FETCH DONUT DATA =================
+  /* ================= FETCH PAYROLL COST OVERVIEW ================= */
   useEffect(() => {
     if (!selectedPayroll) return;
 
@@ -78,7 +85,7 @@ export default function UserDashboard() {
       });
   }, [selectedPayroll]);
 
-  // ================= FETCH ENCODING SUMMARY =================
+  /* ================= FETCH ENCODING SUMMARY ================= */
   useEffect(() => {
     fetch("/api/dashboard/encoding-summary")
       .then((res) => res.json())
@@ -88,12 +95,27 @@ export default function UserDashboard() {
             total_employees: Number(json.data.total_employees || 0),
             completed: Number(json.data.completed || 0),
             pending: Number(json.data.pending || 0),
+            paycode: json.data.paycode || "-",
           });
         }
       });
   }, []);
 
-  // ================= FETCH TRANSACTION SUMMARY =================
+  /* ================= FETCH LEAVE SUMMARY ================= */
+  useEffect(() => {
+    fetch("/api/dashboard/leave-summary")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          setLeaveSummary({
+            pendingTotal: Number(json.data.pendingTotal || 0),
+            approved: Number(json.data.approved || 0),
+          });
+        }
+      });
+  }, []);
+
+  /* ================= FETCH TRANSACTION SUMMARY ================= */
   useEffect(() => {
     fetch("/api/dashboard/transaction-summary")
       .then((res) => res.json())
@@ -110,7 +132,7 @@ export default function UserDashboard() {
       });
   }, []);
 
-  // ================= FETCH RECENT TRANSACTIONS =================
+  /* ================= FETCH RECENT TRANSACTIONS ================= */
   useEffect(() => {
     fetch("/api/dashboard/recent-transactions")
       .then((res) => res.json())
@@ -121,7 +143,7 @@ export default function UserDashboard() {
       });
   }, []);
 
-  // ================= HELPERS =================
+  /* ================= HELPERS ================= */
   const formatTimeAgo = (timestamp) => {
     if (!timestamp) return "—";
 
@@ -147,7 +169,7 @@ export default function UserDashboard() {
       })}`
     : "—";
 
-  // ================= RENDER =================
+  /* ================= RENDER ================= */
   return (
     <div className="flex flex-col md:flex-row">
       <SideBar />
@@ -176,12 +198,12 @@ export default function UserDashboard() {
                 totalEmployees={encodingSummary.total_employees}
                 pending={encodingSummary.pending}
                 completed={encodingSummary.completed}
+                paycode={encodingSummary.paycode}
               />
 
               <PendingLeaveRequestCard
-                pendingTotal={13}
-                forEvaluation={6}
-                approved={121}
+                pendingTotal={leaveSummary.pendingTotal}
+                approved={leaveSummary.approved}
               />
 
               <TransactionHistorySummary

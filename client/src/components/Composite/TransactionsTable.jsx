@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { LuPrinter } from "react-icons/lu";
 import TransactionPrint from "./TransactionPrint";
 
-export default function TransactionsTable() {
+export default function TransactionsTable({ search = "" }) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,6 +30,23 @@ export default function TransactionsTable() {
     fetchTransactions();
     return () => (mounted = false);
   }, []);
+
+  /* ================= GLOBAL SEARCH ================= */
+  const filteredRows = transactions.filter((t) => {
+    if (!search) return true;
+
+    const q = search.toLowerCase();
+
+    return (
+      t.transaction_code?.toLowerCase().includes(q) ||
+      String(t.employee_count).includes(q) ||
+      String(t.total_earnings).includes(q) ||
+      String(t.total_deductions).includes(q) ||
+      String(t.total_net_pay).includes(q) ||
+      new Date(t.period_start).toLocaleDateString().toLowerCase().includes(q) ||
+      new Date(t.period_end).toLocaleDateString().toLowerCase().includes(q)
+    );
+  });
 
   return (
     <>
@@ -80,14 +97,14 @@ export default function TransactionsTable() {
                   Loading transactions...
                 </td>
               </tr>
-            ) : transactions.length === 0 ? (
+            ) : filteredRows.length === 0 ? (
               <tr>
                 <td colSpan="8" className="px-4 py-4 text-center text-gray-500">
-                  No finalized payroll transactions found.
+                  No transactions found.
                 </td>
               </tr>
             ) : (
-              transactions.map((t) => (
+              filteredRows.map((t) => (
                 <tr key={t.transaction_id} className="hover:bg-gray-50">
                   <td className="px-4 py-2 text-sm font-mono">
                     {t.transaction_code}

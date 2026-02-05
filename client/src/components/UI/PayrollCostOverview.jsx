@@ -19,7 +19,7 @@ export default function PayrollCostOverview({
     { name: "Deductions", value: deductions },
   ];
 
-  const COLORS = ["#0F5CAD", "#79C2FF"];
+  const COLORS = ["#03045e", "#0077B6"];
   const total = expenses + deductions;
   const percent = total > 0 ? Math.round((expenses / total) * 100) : 0;
 

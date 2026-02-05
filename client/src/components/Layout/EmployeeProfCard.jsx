@@ -51,7 +51,7 @@ export default function EmployeeProfCard({
     async function loadEmployees() {
       try {
         const res = await fetch(
-          `http://localhost:5000/api/employees?department=${selectedDept}`
+          `http://localhost:5000/api/employees?department=${encodeURIComponent(selectedDept)}`
         );
         const json = await res.json();
         setEmployees(json.data || []);

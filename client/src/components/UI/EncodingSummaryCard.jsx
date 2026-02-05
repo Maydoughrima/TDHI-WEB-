@@ -8,6 +8,7 @@ export default function EncodingSummaryCard({
   totalEmployees = 0,
   pending = 0,
   completed = 0,
+  paycode = "-", // ✅ NEW PROP
 }) {
   const getPercent = (value) => {
     if (!totalEmployees) return 0;
@@ -16,13 +17,18 @@ export default function EncodingSummaryCard({
 
   return (
     <div className="bg-secondary rounded-md shadow-md p-4 flex flex-col gap-4">
-      {/* HEADER */}
+      {/* ================= HEADER ================= */}
       <div className="flex items-center gap-2">
         <SlGraph className="text-bg text-lg" />
         <p className="text-bg font-heading text-sm">Encoding Summary</p>
       </div>
 
-      {/* PROGRESS LIST */}
+      {/* ================= PAYCODE ================= */}
+      <p className="text-bg/80 text-xs font-mono -mt-2">
+        Paycode: <span className="font-semibold text-bg">{paycode}</span>
+      </p>
+
+      {/* ================= PROGRESS LIST ================= */}
       <div className="flex flex-col gap-3">
         {/* EMPLOYEES */}
         <div>
@@ -64,7 +70,7 @@ export default function EncodingSummaryCard({
         </div>
       </div>
 
-      {/* SCALE */}
+      {/* ================= SCALE ================= */}
       <div className="flex justify-between text-[10px] text-bg/70 mt-1">
         <span>0%</span>
         <span>50%</span>

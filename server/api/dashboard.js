@@ -119,7 +119,7 @@ router.get("/dashboard/encoding-summary", async (req, res) => {
   try {
     // 1️⃣ Find latest PENDING payroll
     let payrollResult = await pool.query(`
-      SELECT id
+      SELECT id, paycode
       FROM payroll_files
       WHERE status = 'pending'
       ORDER BY created_at DESC
@@ -129,7 +129,7 @@ router.get("/dashboard/encoding-summary", async (req, res) => {
     // 2️⃣ Fallback to latest DONE payroll if no pending
     if (payrollResult.rows.length === 0) {
       payrollResult = await pool.query(`
-        SELECT id
+        SELECT id, paycode
         FROM payroll_files
         WHERE status = 'done'
         ORDER BY created_at DESC
@@ -143,6 +143,7 @@ router.get("/dashboard/encoding-summary", async (req, res) => {
         success: true,
         data: {
           payroll_file_id: null,
+          paycode: null,
           total_employees: 0,
           completed: 0,
           pending: 0,
@@ -151,7 +152,7 @@ router.get("/dashboard/encoding-summary", async (req, res) => {
       });
     }
 
-    const payrollFileId = payrollResult.rows[0].id;
+    const { id: payrollFileId, paycode } = payrollResult.rows[0];
 
     // 4️⃣ TOTAL employees (entire company)
     const totalResult = await pool.query(`
@@ -177,6 +178,7 @@ router.get("/dashboard/encoding-summary", async (req, res) => {
       success: true,
       data: {
         payroll_file_id: payrollFileId,
+        paycode, // ✅ ADDED
         total_employees: total,
         completed,
         pending,
@@ -188,6 +190,7 @@ router.get("/dashboard/encoding-summary", async (req, res) => {
     res.status(500).json({ success: false });
   }
 });
+
 
 /**
  * ======================================================
@@ -263,8 +266,11 @@ router.get("/dashboard/recent-transactions", async (req, res) => {
         t.entity,
         t.reference_code,
         t.created_at,
+
         u.fullname AS actor_name,
-        u.role AS actor_role
+        u.role AS actor_role,
+        u.profile_image AS actor_profile_image  -- ✅ THIS WAS MISSING
+
       FROM transactions t
       LEFT JOIN users u ON u.id = t.actor_id
       ORDER BY t.created_at DESC
@@ -277,6 +283,36 @@ router.get("/dashboard/recent-transactions", async (req, res) => {
     });
   } catch (error) {
     console.error("Recent transactions error:", error);
+    res.status(500).json({ success: false });
+  }
+});
+
+
+/**
+ * ======================================================
+ * GET /dashboard/leave-summary
+ * PURPOSE:
+ * - Dashboard preview (pending leave req)
+ * ======================================================
+ */
+router.get("/dashboard/leave-summary", async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'PENDING')::int AS pending,
+        COUNT(*) FILTER (WHERE status = 'APPROVED')::int AS approved
+      FROM leave_requests
+    `);
+
+    res.json({
+      success: true,
+      data: {
+        pendingTotal: rows[0].pending,
+        approved: rows[0].approved,
+      },
+    });
+  } catch (err) {
+    console.error("Leave summary error:", err);
     res.status(500).json({ success: false });
   }
 });

@@ -246,7 +246,7 @@ router.patch("/:id/decision", async (req, res) => {
     await transactionLog({
       actorId,
       actorRole: "PAYROLL_CHECKER",
-      action: "EDIT",
+      action: "APPROVE",
       entity: "LEAVE_REQUEST",
       entityId: leave.employee_id,
       status: decision,

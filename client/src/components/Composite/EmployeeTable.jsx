@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import EmployeePayrollModal from "../UI/EmployeePayrollModal";
 import PayslipModal from "../Composite/PayslipModal";
 import WarningModal from "../UI/WarningModal";
+import PrintPayslipsBatch from "./PrintPayslipBatch";
 
-/**
- * COLUMN CONFIG
- */
+/* =====================================================
+   COLUMN CONFIG
+===================================================== */
 const employeeColumns = [
   { label: "Employee No.", key: "employeeNo" },
   { label: "Employee Name", key: "name" },
@@ -17,24 +18,29 @@ const employeeColumns = [
 
 export default function EmployeeTable({
   payroll,
+  search = "",               // ✅ RECEIVE SEARCH
   onExitPayroll,
   onRefreshPayrolls,
 }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 🔹 Edit Payroll
+  /* ================= EDIT PAYROLL ================= */
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [openPayrollModal, setOpenPayrollModal] = useState(false);
 
-  // 🔹 View Payslip
+  /* ================= VIEW PAYSLIP ================= */
   const [selectedPayslip, setSelectedPayslip] = useState(null);
   const [openPayslipModal, setOpenPayslipModal] = useState(false);
 
-  // 🔹 Finalize
+  /* ================= FINALIZE ================= */
   const [finalizing, setFinalizing] = useState(false);
   const [showFinalizeWarning, setShowFinalizeWarning] = useState(false);
   const [unprocessedEmployees, setUnprocessedEmployees] = useState([]);
+
+  /* ================= PRINT ================= */
+  const [printAll, setPrintAll] = useState(false);
+  const [printBatchKey, setPrintBatchKey] = useState(0);
 
   /* =====================================================
      FETCH EMPLOYEES
@@ -53,9 +59,9 @@ export default function EmployeeTable({
         setRows(
           json.data.map((e) => ({
             id: e.id,
-            employeeNo: e.employee_no,
-            name: e.full_name,
-            department: e.department,
+            employeeNo: String(e.employee_no ?? ""),
+            name: e.full_name ?? "",
+            department: e.department ?? "",
             employeeStatus: e.employment_status ?? "-",
             payroll_status: payroll.status,
           }))
@@ -69,7 +75,24 @@ export default function EmployeeTable({
   };
 
   /* =====================================================
-     VIEW PAYSLIP (CORRECT SOURCE)
+     GLOBAL SEARCH (AFTER NORMALIZATION)
+  ===================================================== */
+  const filteredRows = rows.filter((r) => {
+    if (!search) return true;
+
+    const q = search.toLowerCase();
+
+    return (
+      r.employeeNo.toLowerCase().includes(q) ||
+      r.name.toLowerCase().includes(q) ||
+      r.department.toLowerCase().includes(q) ||
+      r.employeeStatus.toLowerCase().includes(q) ||
+      r.payroll_status.toLowerCase().includes(q)
+    );
+  });
+
+  /* =====================================================
+     VIEW PAYSLIP
   ===================================================== */
   const handleViewPayslip = async (employeeId) => {
     try {
@@ -88,14 +111,14 @@ export default function EmployeeTable({
       );
 
       if (!payslip) {
-        alert("Payslip not found for this employee");
+        alert("Payslip not found");
         return;
       }
 
       setSelectedPayslip(payslip);
       setOpenPayslipModal(true);
     } catch (err) {
-      console.error("View payslip error:", err);
+      console.error(err);
       alert("Server error loading payslip");
     }
   };
@@ -175,9 +198,9 @@ export default function EmployeeTable({
   ===================================================== */
   return (
     <>
-      {/* FINALIZE BUTTON */}
-      {payroll.status === "pending" && (
-        <div className="flex justify-end mb-3">
+      {/* ACTION BAR */}
+      <div className="flex justify-end mb-3 gap-2">
+        {payroll.status === "pending" && (
           <button
             onClick={handleFinalizePayroll}
             disabled={finalizing}
@@ -185,8 +208,23 @@ export default function EmployeeTable({
           >
             {finalizing ? "Finalizing..." : "Finalize Payroll"}
           </button>
-        </div>
-      )}
+        )}
+
+        {payroll.status === "done" && (
+          <button
+            onClick={() => {
+              setPrintAll(false);
+              setTimeout(() => {
+                setPrintBatchKey((k) => k + 1);
+                setPrintAll(true);
+              }, 0);
+            }}
+            className="px-4 py-2 bg-secondary text-white rounded-md text-sm font-semibold"
+          >
+            Print All Payslips
+          </button>
+        )}
+      </div>
 
       {/* TABLE */}
       <div className="overflow-x-auto bg-white rounded-md shadow-sm">
@@ -211,8 +249,14 @@ export default function EmployeeTable({
                   Loading...
                 </td>
               </tr>
+            ) : filteredRows.length === 0 ? (
+              <tr>
+                <td colSpan={employeeColumns.length} className="text-center py-6">
+                  No employees found.
+                </td>
+              </tr>
             ) : (
-              rows.map((row) => (
+              filteredRows.map((row) => (
                 <tr key={row.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">{row.employeeNo}</td>
                   <td className="px-4 py-3">{row.name}</td>
@@ -220,8 +264,7 @@ export default function EmployeeTable({
                   <td className="px-4 py-3">{row.employeeStatus}</td>
                   <td className="px-4 py-3">{row.payroll_status}</td>
 
-                  {/* ACTION */}
-                  <td className="px-4 py-3 flex gap-2">
+                  <td className="px-4 py-3">
                     {payroll.status === "pending" && (
                       <button
                         className="text-blue-600 text-sm"
@@ -250,10 +293,10 @@ export default function EmployeeTable({
         </table>
       </div>
 
-      {/* EDIT PAYROLL MODAL */}
+      {/* MODALS */}
       {openPayrollModal && selectedEmployee && (
         <EmployeePayrollModal
-          isOpen={openPayrollModal}
+          isOpen
           employee={selectedEmployee}
           payroll={payroll}
           onClose={() => {
@@ -263,10 +306,9 @@ export default function EmployeeTable({
         />
       )}
 
-      {/* PAYSLIP MODAL */}
       {openPayslipModal && selectedPayslip && (
         <PayslipModal
-          isOpen={openPayslipModal}
+          isOpen
           payslip={selectedPayslip}
           onClose={() => {
             setOpenPayslipModal(false);
@@ -281,9 +323,7 @@ export default function EmployeeTable({
         title="Finalize Payroll"
         message={
           <>
-            <p className="mb-2 font-semibold">
-              Unprocessed employees:
-            </p>
+            <p className="mb-2 font-semibold">Unprocessed employees:</p>
             <ul className="list-disc list-inside text-sm">
               {unprocessedEmployees.map((e) => (
                 <li key={e.id}>{e.full_name}</li>
@@ -298,6 +338,15 @@ export default function EmployeeTable({
           await finalizePayrollForce();
         }}
       />
+
+      {/* PRINT ALL */}
+      {printAll && (
+        <PrintPayslipsBatch
+          key={printBatchKey}
+          payrollFileId={payroll.id}
+          onDone={() => setPrintAll(false)}
+        />
+      )}
     </>
   );
 }

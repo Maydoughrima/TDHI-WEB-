@@ -648,12 +648,12 @@ router.post(
 
       const { payrollFileId, employeeId } = req.params;
 
-      // ======================================================
-      // 🔒 BLOCK SAVE IF PAYROLL IS FINALIZED
-      // ======================================================
+      /* ======================================================
+         🔒 BLOCK SAVE IF PAYROLL IS FINALIZED
+      ====================================================== */
       const { rows: pfRows } = await client.query(
         `SELECT status FROM payroll_files WHERE id = $1`,
-        [payrollFileId],
+        [payrollFileId]
       );
 
       if (!pfRows.length) {
@@ -683,23 +683,30 @@ router.post(
         status,
       } = req.body;
 
-      // ======================================================
-      // 🔒 HARD GUARDS (PREVENT NULL VIOLATIONS)
-      // ======================================================
       const basicRate = Number(quincenaRate);
-
       if (!basicRate || basicRate <= 0) {
         return res.status(400).json({
           success: false,
-          message: "Invalid quincena rate (basic_rate required)",
+          message: "Invalid quincena rate",
         });
       }
 
+      /* ======================================================
+         ✅ MANUAL ADJUSTMENTS
+         IMPORTANT:
+         - amount is ALREADY PESO
+         - DO NOT convert again
+      ====================================================== */
+      const safeManualAdjustments = (manualAdjustments || []).map((adj) => ({
+        ...adj,
+        amount: Math.round(Number(adj.amount || 0) * 100) / 100,
+      }));
+
       await client.query("BEGIN");
 
-      // ======================================================
-      // UPSERT SNAPSHOT (COLUMN ORDER MATCHES TABLE)
-      // ======================================================
+      /* ======================================================
+         UPSERT SNAPSHOT (SOURCE OF TRUTH)
+      ====================================================== */
       await client.query(
         `
         INSERT INTO payroll_employee_snapshots (
@@ -747,33 +754,20 @@ router.post(
         [
           payrollFileId,
           employeeId,
-          basicRate, // ✅ NOT NULL
+          basicRate,
           dailyRate ?? null,
           hourlyRate ?? null,
-          quincenaRate, // ✅ NOT NULL
+          quincenaRate,
           JSON.stringify(govDeductions ?? []),
           JSON.stringify(loanDeductions ?? []),
-          JSON.stringify(manualAdjustments ?? []),
+          JSON.stringify(safeManualAdjustments),
           totalEarnings,
           totalDeductions,
           netPay,
           status,
           actorId,
-        ],
+        ]
       );
-
-      // ======================================================
-      // AUDIT LOG (SAFE ENUM)
-      // ======================================================
-      await transactionLog({
-        actorId,
-        actorRole: "PAYROLL_CHECKER",
-        action: "EDIT",
-        entity: "PAYROLL_FILE",
-        entityId: employeeId,
-        status: "COMPLETED",
-        description: `Updated payroll snapshot for payroll=${payrollFileId}`,
-      });
 
       await client.query("COMMIT");
       res.json({ success: true });
@@ -787,8 +781,10 @@ router.post(
     } finally {
       client.release();
     }
-  },
+  }
 );
+
+
 
 // ======================================================
 // CHECK UNPROCESSED EMPLOYEES (BEFORE FINALIZE)

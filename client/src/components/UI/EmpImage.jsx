@@ -132,7 +132,7 @@ export default function EmpImage({
               ? dayjs(employee.date_hired).format("MMM D, YYYY")
               : "N/A"}
           </p>
-          {daysEmployed !== null && (
+          {daysEmployed !== null && ( 
             <p>({daysEmployed} days employed)</p>
           )}
         </div>

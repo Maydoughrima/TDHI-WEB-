@@ -48,10 +48,6 @@ export default function TransactionHistorySummary({
           <p className="font-medium text-primary">{edited}</p>
           <p>Edited</p>
         </div>
-        <div>
-          <p className="font-medium text-primary">{approved}</p>
-          <p>Approved</p>
-        </div>
       </div>
 
       {/* FOOTER */}

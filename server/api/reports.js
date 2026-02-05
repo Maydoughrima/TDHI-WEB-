@@ -145,6 +145,7 @@ router.get("/reports/expenditures", async (req, res) => {
         COALESCE(manual.radiology_supplies, 0) AS radiology_supplies,
         COALESCE(manual.nursing_supplies, 0) AS nursing_supplies,
         COALESCE(manual.affiliation_fee, 0) AS affiliation_fee,
+        COALESCE(manual.accured_expenses, 0) AS accured_expenses,
 
         /* ================= CASH ================= */
         COALESCE(salaries.cash_in_bank_dbp, 0) AS cash_in_bank_dbp
@@ -198,7 +199,8 @@ router.get("/reports/expenditures", async (req, res) => {
           payroll_file_id,
           SUM(CASE WHEN expense_type = 'RADIOLOGY_SUPPLIES' THEN amount ELSE 0 END) AS radiology_supplies,
           SUM(CASE WHEN expense_type = 'NURSING_SUPPLIES' THEN amount ELSE 0 END) AS nursing_supplies,
-          SUM(CASE WHEN expense_type = 'AFFILIATION_FEE' THEN amount ELSE 0 END) AS affiliation_fee
+          SUM(CASE WHEN expense_type = 'AFFILIATION_FEE' THEN amount ELSE 0 END) AS affiliation_fee,
+           SUM(CASE WHEN expense_type = 'ACCURED_EXPENSES' THEN amount ELSE 0 END) AS accured_expenses
         FROM payroll_expenditure_adjustments
         GROUP BY payroll_file_id
       ) manual

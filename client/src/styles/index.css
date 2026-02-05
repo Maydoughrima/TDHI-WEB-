@@ -62,7 +62,9 @@
   #reports-print,
   #reports-print *,
   #transaction-print,
-  #transaction-print * {
+  #transaction-print *,
+  #payslip-print,
+  #payslip-print * {
     visibility: visible !important;
   }
 
@@ -71,11 +73,12 @@
      =============================== */
   #ledger-print,
   #reports-print,
-  #transaction-print {
+  #transaction-print,
+  #payslip-print {
     position: absolute;
     inset: 0;
     width: 100%;
-    padding: 15mm;
+    padding: 12mm;
     background: white;
   }
 
@@ -92,7 +95,9 @@
   textarea,
   img,
   .no-print,
-  .screen-only {
+  .screen-only,
+  .payslip-modal,
+  .payslip-overlay {
     display: none !important;
   }
 
@@ -123,7 +128,7 @@
      6️⃣ PAGE CONFIG
      =============================== */
   @page {
-    size: A4 landscape;
+    size: A4 portrait;
     margin: 10mm;
   }
 
@@ -198,18 +203,17 @@
   }
 
   /* ===============================
-     🔟 REPORTS / EXPENDITURES FIX
-     (SAFE — DOES NOT TOUCH LEDGER)
+     🔟 REPORTS FIX
      =============================== */
   #reports-print .overflow-x-auto {
     overflow: visible !important;
   }
 
   #reports-print table {
-  width: 100% !important;
-  min-width: 1800px; /* allow horizontal breathing room */
-  table-layout: auto; /* 🔑 FIX */
-}
+    width: 100% !important;
+    min-width: 1800px;
+    table-layout: auto;
+  }
 
   #reports-print th,
   #reports-print td {
@@ -219,7 +223,44 @@
   }
 
   /* ===============================
-     1️⃣1️⃣ PRINT-ONLY VISIBILITY
+     1️⃣1️⃣ PAYSLIP-SPECIFIC FIX
+     =============================== */
+  #payslip-print {
+    page-break-inside: avoid;
+  }
+
+  #payslip-print .payslip-card {
+    max-width: 180mm;
+    margin: 0 auto;
+    font-size: 11px;
+  }
+
+  #payslip-print h1,
+  #payslip-print h2 {
+    text-align: center;
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+
+  #payslip-print table {
+    border: none;
+  }
+
+  #payslip-print td,
+  #payslip-print th {
+    border: none;
+    padding: 4px 0;
+    font-size: 11px;
+  }
+
+  #payslip-print .net {
+    font-size: 15px;
+    font-weight: bold;
+    margin-top: 10px;
+  }
+
+  /* ===============================
+     PRINT-ONLY VISIBILITY
      =============================== */
   .print-only {
     display: inline !important;
@@ -263,43 +304,80 @@
 }
 
 /* =========================================================
-   TRANSACTION PRINT (SAFE)
+   PAYSLIP SCREEN SCROLL
    ========================================================= */
-#transaction-print h1 {
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
+.payslip-scroll {
+  max-height: 70vh;
+  overflow-y: auto;
 }
 
-#transaction-print .subtitle {
-  font-size: 12px;
-  text-align: center;
-  margin-top: 4px;
+/* =========================================================
+   PAYSLIP BATCH PRINT — ISOLATED & SAFE
+   ========================================================= */
+/* =========================================================
+   PAYSLIP BATCH PRINT — ISOLATED & SAFE
+   ========================================================= */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #payslip-batch-print,
+  #payslip-batch-print * {
+    visibility: visible !important;
+  }
+
+  #payslip-batch-print {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    background: white;
+  }
+
+  /* TWO PAYSLIPS PER PAGE */
+  .payslip-page {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8mm;
+    page-break-after: always;
+  }
+
+  /* PAYSLIP CARD SHRINK (NOT SCALE) */
+  .payslip-item {
+    border: 1px solid #000;
+    padding: 6mm;
+    font-size: 10px;
+    line-height: 1.25;
+    page-break-inside: avoid;
+  }
+
+  /* TABLE TIGHTENING */
+  .payslip-item table td,
+  .payslip-item table th {
+    font-size: 9.5px;
+    padding: 2px 4px;
+  }
+
+  /* SIGNATURES */
+  .signature-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8mm;
+    font-size: 9px;
+  }
+
+  .sig-line {
+    width: 120px;
+    border-top: 1px solid #000;
+    margin-bottom: 3px;
+  }
 }
 
-#transaction-print .print-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  margin-bottom: 16px;
-}
 
-#transaction-print .print-meta span {
-  font-size: 11px;
-  color: #444;
-}
 
-#transaction-print .print-period {
-  margin-bottom: 20px;
-  font-size: 13px;
-}
 
-#transaction-print .print-period span {
-  font-size: 11px;
-  color: #444;
-}
-
-#transaction-print .net-pay {
-  font-weight: bold;
-  font-size: 14px;
-}

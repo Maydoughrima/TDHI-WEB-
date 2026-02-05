@@ -10,6 +10,7 @@ const reportExpenditures = [
   { label: "Radiology", key: "radiology_supplies", manual: true },
   { label: "Nursing", key: "nursing_supplies", manual: true },
   { label: "Affiliation", key: "affiliation_fee", manual: true },
+   { label: "Accured", key: "accured_expenses", manual: true },
 
   { label: "Food Allow.", key: "food_allowance" },
   { label: "AP SSS", key: "ap_sss" },
@@ -20,7 +21,6 @@ const reportExpenditures = [
   { label: "Hospital", key: "hospital_account" },
   { label: "Canteen", key: "canteen" },
   { label: "Other NSO", key: "other_nso" },
-  { label: "Accured", key: "accrued_expenses" },
   { label: "Cash (DBP)", key: "cash_in_bank_dbp" },
   { label: "Total", key: "total", bold: true },
 ];
@@ -31,6 +31,7 @@ export default function ReportExpenditures({ filters }) {
     radiology_supplies: 0,
     nursing_supplies: 0,
     affiliation_fee: 0,
+    accured_expenses:0,
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -60,6 +61,7 @@ export default function ReportExpenditures({ filters }) {
           radiology_supplies: Number(json.data.radiology_supplies || 0),
           nursing_supplies: Number(json.data.nursing_supplies || 0),
           affiliation_fee: Number(json.data.affiliation_fee || 0),
+          accured_expenses: Number(json.data.accured_expenses || 0),
         });
       } catch (err) {
         console.error(err);
@@ -72,19 +74,21 @@ export default function ReportExpenditures({ filters }) {
   }, [filters?.payrollFileId]);
 
   /* ================= TOTAL ================= */
-  const total =
-    Number(data?.cash_in_bank_dbp || 0) +
-    Number(data?.ap_sss || 0) +
-    Number(data?.ap_phic || 0) +
-    Number(data?.sss_salary_loan || 0) +
-    Number(data?.sss_calamity_loan || 0) +
-    Number(data?.withholding_tax || 0) +
-    Number(data?.hospital_account || 0) +
-    Number(data?.canteen || 0) +
-    Number(data?.other_nso || 0) +
-    Number(manual.radiology_supplies || 0) +
-    Number(manual.nursing_supplies || 0) +
-    Number(manual.affiliation_fee || 0);
+const total =
+  Number(data?.cash_in_bank_dbp || 0) +
+  Number(data?.ap_sss || 0) +
+  Number(data?.ap_phic || 0) +
+  Number(data?.sss_salary_loan || 0) +
+  Number(data?.sss_calamity_loan || 0) +
+  Number(data?.withholding_tax || 0) +
+  Number(data?.hospital_account || 0) +
+  Number(data?.canteen || 0) +
+  Number(data?.other_nso || 0) +
+  Number(manual.radiology_supplies || 0) +
+  Number(manual.nursing_supplies || 0) +
+  Number(manual.affiliation_fee || 0) +
+  Number(manual.accured_expenses || 0);
+    
 
   const handleManualChange = (key, value) => {
     setManual((prev) => ({ ...prev, [key]: Number(value || 0) }));
@@ -111,6 +115,7 @@ export default function ReportExpenditures({ filters }) {
             { type: "RADIOLOGY_SUPPLIES", amount: manual.radiology_supplies },
             { type: "NURSING_SUPPLIES", amount: manual.nursing_supplies },
             { type: "AFFILIATION_FEE", amount: manual.affiliation_fee },
+            { type: "ACCURED_EXPENSES", amount: manual.accured_expenses },
           ],
         }),
       });
