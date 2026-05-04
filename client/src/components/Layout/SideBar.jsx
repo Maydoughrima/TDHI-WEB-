@@ -65,7 +65,10 @@ export default function Sidebar() {
 
           {/* Desktop Logo */}
           <div className="hidden md:block border-b border-gray-300 pb-3 mb-6">
-            <img src={logo} alt="Logo" className="w-20" />
+            <div className="flex items-center gap-2">
+              <img src={logo} alt="Logo" className="w-20" />
+              <p className="block bg-gradient-to-r from-[#03045e] via-[#0077B6] to-[#00B4D8] bg-clip-text text-transparent font-heading font-extrabold text-xl">HEALARY</p>
+            </div>
           </div>
 
           {/* MAIN */}

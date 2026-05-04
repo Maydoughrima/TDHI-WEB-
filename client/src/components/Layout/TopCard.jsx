@@ -41,7 +41,7 @@ export default function TopCard({ title }) {
   const handleLogout = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("me");
-    navigate("/login");
+    navigate("/");
   };
 
   return (

@@ -30,16 +30,23 @@ export default function ApproveLeave() {
   /* ===========================
      FETCH PENDING REQUESTS
   =========================== */
-  const fetchRequests = () => {
+  const fetchRequests = async () => {
     setLoading(true);
-    fetch("/api/leave-requests/pending")
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.success && Array.isArray(json.data)) {
-          setRequests(json.data);
-        }
-      })
-      .finally(() => setLoading(false));
+    try {
+      const res = await fetch("/api/leave-requests/pending");
+      const json = await res.json();
+
+      if (json.success && Array.isArray(json.data)) {
+        setRequests(json.data);
+      } else {
+        setRequests([]);
+      }
+    } catch (err) {
+      console.error("Fetch pending requests error:", err);
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -49,22 +56,30 @@ export default function ApproveLeave() {
   /* ===========================
      OPEN HISTORY MODAL
   =========================== */
-  const openHistory = () => {
+  const openHistory = async () => {
     setHistoryOpen(true);
     setHistoryLoading(true);
 
-    fetch("/api/leave-requests/history", {
-      headers: {
-        "x-user-id": PAYROLL_CHECKER_ID,
-      },
-    })
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.success && Array.isArray(json.data)) {
-          setHistoryRecords(json.data);
-        }
-      })
-      .finally(() => setHistoryLoading(false));
+    try {
+      const res = await fetch("/api/leave-requests/history", {
+        headers: {
+          "x-user-id": PAYROLL_CHECKER_ID,
+        },
+      });
+
+      const json = await res.json();
+
+      if (json.success && Array.isArray(json.data)) {
+        setHistoryRecords(json.data);
+      } else {
+        setHistoryRecords([]);
+      }
+    } catch (err) {
+      console.error("Fetch leave history error:", err);
+      setHistoryRecords([]);
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   /* ===========================
@@ -99,6 +114,7 @@ export default function ApproveLeave() {
       const json = await res.json();
       if (!json.success) throw new Error(json.message);
 
+      // remove from pending list
       setRequests((prev) => prev.filter((r) => r.id !== id));
 
       setSuccessMessage(
@@ -108,7 +124,7 @@ export default function ApproveLeave() {
       );
       setSuccessOpen(true);
     } catch (err) {
-      console.error(err);
+      console.error("Decision error:", err);
     } finally {
       setProcessingId(null);
       setPendingAction(null);

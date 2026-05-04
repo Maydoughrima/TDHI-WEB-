@@ -296,4 +296,38 @@ router.get("/pending", async (_, res) => {
   res.json({ success: true, data: rows });
 });
 
+/* ======================================================
+   GET /api/leave-requests/history
+   - APPROVED & REJECTED ONLY
+====================================================== */
+router.get("/history", async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        lr.id,
+        lr.employee_id,
+        e.full_name AS employee_name,
+        lr.department,
+        lr.leave_type,
+        lr.start_date,
+        lr.end_date,
+        lr.status,
+        lr.approved_at
+      FROM leave_requests lr
+      JOIN employees e ON e.id = lr.employee_id
+      WHERE lr.status IN ('APPROVED', 'REJECTED')
+      ORDER BY lr.approved_at DESC
+    `);
+
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error("FETCH LEAVE HISTORY ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch leave history",
+    });
+  }
+});
+
+
 export default router;

@@ -165,21 +165,11 @@ export default function EmployeePayrollModal({
     loans.forEach((l) => (deduct += Number(l.amount || 0)));
 
     manual.forEach((m) => {
-      let computed = 0;
-      const qty = Number(m.amount || 0);
-
-      if (m.unit === "HRS") {
-        computed = qty * hourlyRate;
-      } else if (m.unit === "MINS") {
-        computed = (qty / 60) * hourlyRate;
-      } else {
-        // PESO
-        computed = qty;
-      }
+      const computed = Number(m.amount || 0);
 
       if (m.effect === "ADD") add += computed;
       else deduct += computed;
-    });
+    }); 
 
     return {
       totalEarnings: round(quincena + add),

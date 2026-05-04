@@ -9,7 +9,40 @@ import PersonalDetailsModal from "../Composite/PersonalDetailsModal";
 import PayrollInfoModal from "../Composite/PayrollInfoModal";
 import UploadImageModal from "../Composite/UploadImageModal";
 
-export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
+/* ===================== REQUIRED FIELDS ===================== */
+const REQUIRED_FIELDS_STEP_1 = {
+  employeeNo: "Employee No.",
+  fullName: "Full Name",
+  dateHired: "Date Hired",
+  department: "Department",
+  dateOfBirth: "Date of Birth",
+  civilStatus: "Civil Status",
+};
+
+const REQUIRED_FIELDS_STEP_2 = {
+  employeeStatus: "Employee Status",
+  designation: "Designation",
+  basicRate: "Basic Rate",
+};
+
+/* ===================== VALIDATION HELPER ===================== */
+function validateFields(requiredFields, form) {
+  const missing = [];
+
+  Object.entries(requiredFields).forEach(([key, label]) => {
+    if (!form[key] || String(form[key]).trim() === "") {
+      missing.push(label);
+    }
+  });
+
+  return missing;
+}
+
+export default function AddEmployeeModal({
+  isOpen,
+  onClose,
+  onEmployeeAdded,
+}) {
   const [step, setStep] = useState(1);
   const [showduplicateModal, setshowDuplicateModal] = useState(false);
 
@@ -54,9 +87,25 @@ export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
     onClose();
   };
 
+  /* ===================== SUBMIT ===================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    /* 🔒 FRONTEND VALIDATION */
+    const missingStep1 = validateFields(REQUIRED_FIELDS_STEP_1, form);
+    const missingStep2 = validateFields(REQUIRED_FIELDS_STEP_2, form);
+
+    if (missingStep1.length || missingStep2.length) {
+      setError(
+        `Please complete the following fields: ${[
+          ...missingStep1,
+          ...missingStep2,
+        ].join(", ")}`
+      );
+      setLoading(false);
+      return;
+    }
 
     try {
       const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -79,9 +128,12 @@ export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
         setshowDuplicateModal(true);
         return;
       }
-      if (!res.ok) throw new Error("Failed to add employee");
 
-      onEmployeeAdded(json.data); // 🔥 notify parent
+      if (!res.ok) {
+        throw new Error(json.message || "Failed to add employee");
+      }
+
+      onEmployeeAdded(json.data);
       resetAndClose();
     } catch (err) {
       setError(err.message);
@@ -94,7 +146,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* DARK BACKDROP */}
+          {/* BACKDROP */}
           <motion.div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
             onClick={resetAndClose}
@@ -103,22 +155,16 @@ export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
             exit={{ opacity: 0 }}
           />
 
-          {/* 🌟 FIXED SCROLLABLE MODAL WRAPPER */}
+          {/* MODAL WRAPPER */}
           <motion.div
             className="fixed inset-0 z-50 flex justify-center items-start overflow-y-auto p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {/* 🌟 INNER MODAL — SCROLLABLE BUT UI UNCHANGED */}
             <motion.form
               onSubmit={handleSubmit}
-              className="
-                bg-white rounded-xl shadow-xl 
-                w-full max-w-6xl 
-                p-8 
-                mt-10 mb-10   /* spacing for scroll */
-              "
+              className="bg-white rounded-xl shadow-xl w-full max-w-6xl p-8 mt-10 mb-10"
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
@@ -155,7 +201,6 @@ export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
                     </div>
                   </div>
 
-                  {/* BUTTONS */}
                   <div className="flex justify-end gap-3 mt-10">
                     <Button
                       type="button"
@@ -168,7 +213,24 @@ export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
                     <Button
                       type="button"
                       className="bg-secondary text-bg flex items-center gap-1 shadow-sm"
-                      onClick={() => setStep(2)}
+                      onClick={() => {
+                        const missing = validateFields(
+                          REQUIRED_FIELDS_STEP_1,
+                          form
+                        );
+
+                        if (missing.length > 0) {
+                          setError(
+                            `Please complete the following fields: ${missing.join(
+                              ", "
+                            )}`
+                          );
+                          return;
+                        }
+
+                        setError(null);
+                        setStep(2);
+                      }}
                     >
                       Next <IoIosArrowForward />
                     </Button>
@@ -179,7 +241,10 @@ export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
               {/* ===================== STEP 2 ===================== */}
               {step === 2 && (
                 <>
-                  <PayrollInfoModal form={form} handleChange={handleChange} />
+                  <PayrollInfoModal
+                    form={form}
+                    handleChange={handleChange}
+                  />
 
                   <div className="flex justify-end gap-3 mt-10">
                     <Button
@@ -212,6 +277,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onEmployeeAdded }) {
           </motion.div>
         </>
       )}
+
       <DuplicateEmployeeNoModal
         isOpen={showduplicateModal}
         onClose={() => setshowDuplicateModal(false)}

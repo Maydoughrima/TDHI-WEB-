@@ -1,14 +1,40 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchTransactions } from "../../../../server/api/transactionsAPI";
 
 const ACTION_OPTIONS = ["ALL", "ADD", "EDIT", "DELETE", "LOGIN"];
-const STATUS_OPTIONS = ["ALL", "IN_PROGRESS", "COMPLETED", "PENDING", "ERROR", "APPROVED"];
+const STATUS_OPTIONS = [
+  "ALL",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "PENDING",
+  "ERROR",
+  "APPROVED",
+];
 
 const STATUS_STYLE = {
   IN_PROGRESS: "text-yellow-600 bg-yellow-100",
   COMPLETED: "text-green-600 bg-green-100",
   PENDING: "text-blue-600 bg-blue-100",
   ERROR: "text-red-600 bg-red-100",
+  APPROVED: "text-green-700 bg-green-100",
+};
+
+/* ===============================
+   DATE SEARCH NORMALIZER
+================================ */
+const buildSearchableDate = (date) => {
+  if (!date) return "";
+
+  const d = new Date(date);
+
+  return [
+    d.toLocaleString(), // 2/12/2025, 9:41 AM
+    d.toLocaleDateString("en-US", { month: "short", year: "numeric" }), // Feb 2025
+    d.toLocaleDateString("en-US", { month: "long", year: "numeric" }), // February 2025
+    d.toLocaleDateString("en-US"), // 2/12/2025
+  ]
+    .join(" ")
+    .toLowerCase();
 };
 
 export default function RecentTransactionsTable() {
@@ -17,12 +43,16 @@ export default function RecentTransactionsTable() {
 
   const [actionFilter, setActionFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
 
   const [page, setPage] = useState(0);
   const limit = 20;
 
   const [loading, setLoading] = useState(false);
 
+  /* ===========================
+     FETCH TRANSACTIONS
+  =========================== */
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -35,7 +65,7 @@ export default function RecentTransactionsTable() {
         });
 
         setTransactions(res.data || []);
-        setTotal(res.meta.total || 0);
+        setTotal(res.meta?.total || 0);
       } catch {
         setTransactions([]);
         setTotal(0);
@@ -47,10 +77,37 @@ export default function RecentTransactionsTable() {
     load();
   }, [actionFilter, statusFilter, page]);
 
+  /* ===========================
+     SEARCH FILTER (FIXED)
+  =========================== */
+  const filteredTransactions = useMemo(() => {
+    if (!search.trim()) return transactions;
+
+    const q = search.toLowerCase();
+
+    return transactions.filter((t) => {
+      const dateSearch = buildSearchableDate(t.created_at);
+
+      return [
+        t.actor_name,
+        t.actor_role,
+        t.action,
+        t.entity,
+        t.status,
+        t.affected_employee_name,
+        dateSearch,
+      ]
+        .filter(Boolean)
+        .some((field) =>
+          String(field).toLowerCase().includes(q)
+        );
+    });
+  }, [transactions, search]);
+
   return (
     <div className="bg-bg rounded-md shadow-md">
       {/* FILTERS */}
-      <div className="flex gap-4 px-4 py-4 border-b">
+      <div className="flex flex-wrap gap-3 px-4 py-4 border-b items-center">
         <select
           value={actionFilter}
           onChange={(e) => {
@@ -80,6 +137,15 @@ export default function RecentTransactionsTable() {
             </option>
           ))}
         </select>
+
+        {/* SEARCH */}
+        <input
+          type="text"
+          placeholder="Search actor, entity, employee, date (e.g. Feb, 2025)…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="border rounded px-3 py-2 text-sm flex-1 min-w-[220px]"
+        />
       </div>
 
       {/* TABLE */}
@@ -106,11 +172,13 @@ export default function RecentTransactionsTable() {
             )}
 
             {!loading &&
-              transactions.map((t) => (
+              filteredTransactions.map((t) => (
                 <tr key={t.id}>
                   <td className="px-6 py-4">
                     <p className="font-medium">{t.actor_name}</p>
-                    <p className="text-xs text-gray-500">{t.actor_role}</p>
+                    <p className="text-xs text-gray-500">
+                      {t.actor_role}
+                    </p>
                   </td>
 
                   <td className="px-6 py-4">{t.action}</td>
@@ -129,7 +197,7 @@ export default function RecentTransactionsTable() {
                   <td className="px-6 py-4">
                     <span
                       className={`px-3 py-1 rounded-full text-xs ${
-                        STATUS_STYLE[t.status]
+                        STATUS_STYLE[t.status] || ""
                       }`}
                     >
                       {t.status.replace("_", " ")}
@@ -142,7 +210,7 @@ export default function RecentTransactionsTable() {
                 </tr>
               ))}
 
-            {!loading && transactions.length === 0 && (
+            {!loading && filteredTransactions.length === 0 && (
               <tr>
                 <td colSpan="6" className="text-center py-8 text-gray-400">
                   No transactions found
@@ -163,7 +231,9 @@ export default function RecentTransactionsTable() {
           Previous
         </button>
 
-        <span className="text-sm text-gray-500">Page {page + 1}</span>
+        <span className="text-sm text-gray-500">
+          Page {page + 1}
+        </span>
 
         <button
           disabled={(page + 1) * limit >= total}
